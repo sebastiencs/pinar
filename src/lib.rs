@@ -57,13 +57,13 @@ impl<'e, T> Value<'e, T> {
         self.value
     }
 
-    // fn from(env: &Env, value: napi_value) -> Value<T> {
-    //     Value {
-    //         env,
-    //         value,
-    //         data: PhantomData
-    //     }
-    // }
+    fn from(env: &Env, value: napi_value) -> Value<T> {
+        Value {
+            env,
+            value,
+            data: PhantomData
+        }
+    }
 
     fn env(&self) -> napi_env {
         self.env.env
@@ -161,20 +161,56 @@ impl Env {
     }
 }
 
-// trait IntoRust {
-//     fn into_rust<R>() -> R;
-// }
+trait IntoRust<R> {
+    fn into_rust(self) -> Result<R>;
+}
 
-// impl<'e> IntoRust for Value<'e, JsString> {
-//     fn into_rust<String>() -> String {
-//         "445".to_owned()
-//     }
-// }
+impl<'e> IntoRust<String> for Value<'e, JsString> {
+    fn into_rust(self) -> Result<String> {
+        let len = self.len()?;
+        let mut buffer: Vec<u8> = Vec::with_capacity(len + 1); // + '\0'
+        let mut written = 0usize;
+        unsafe {
+            Status::result(napi_get_value_string_utf8(self.env(), self.value,
+                                                      buffer.as_mut_ptr() as *mut c_char,
+                                                      len + 1,
+                                                      &mut written as *mut usize))?;
+            buffer.set_len(written);
+            // It's probably safe to assume that it's valid ut8
+            Ok(String::from_utf8_unchecked(buffer))
+        }
+    }
+}
 
-// impl<'e> Into<String> for Value<'e, JsString> {
-//     fn into(self) -> String {
-//     }
-// }
+impl<'e> IntoRust<i64> for Value<'e, JsNumber> {
+    fn into_rust(self) -> Result<i64> {
+        let mut number = 0i64;
+        unsafe {
+            Status::result(napi_get_value_int64(self.env(), self.value, &mut number as *mut i64))?;
+        }
+        Ok(number)
+    }
+}
+
+impl<'e> IntoRust<i32> for Value<'e, JsNumber> {
+    fn into_rust(self) -> Result<i32> {
+        let mut number = 0i32;
+        unsafe {
+            Status::result(napi_get_value_int32(self.env(), self.value, &mut number as *mut i32))?;
+        }
+        Ok(number)
+    }
+}
+
+impl<'e> IntoRust<u32> for Value<'e, JsNumber> {
+    fn into_rust(self) -> Result<u32> {
+        let mut number = 0u32;
+        unsafe {
+            Status::result(napi_get_value_int32(self.env(), self.value, &mut number as *mut u32))?;
+        }
+        Ok(number)
+    }
+}
 
 /// - Named: a simple UTF8-encoded string
 /// - Integer-Indexed: an index value represented by uint32_t
@@ -278,6 +314,20 @@ impl<'e> Value<'e, JsHandle> {
     }
 }
 
+impl<'e> Value<'e, JsString> {
+    /// Returns the string length
+    pub fn len(&self) -> Result<usize> {
+        unsafe {
+            let mut length = 0;
+            Status::result(napi_get_value_string_utf8(self.env(), self.value,
+                                                      std::ptr::null_mut() as *mut c_char,
+                                                      0,
+                                                      &mut length as *mut usize))?;
+            Ok(length)
+        }
+    }
+}
+
 impl<'e> Value<'e, JsObject> {
     pub fn set<K, V>(&self, key: K, value: V) -> Result<()>
     where
@@ -371,7 +421,25 @@ macro_rules! register_module {
                     napi_module_register(&mut MODULE_DESCRIPTOR);
                 }
 
-                extern "C" fn init_module(env: napi_env, _: napi_value) -> napi_value {
+                extern "C" fn init_module(env: napi_env, v: napi_value) -> napi_value {
+                    // {
+                    //     let env = Env::from(env);
+                    //     let v: Value<JsHandle> = Value::from(&env, v);
+                    //     println!("{:?}", v.type_of());
+                    // }
+                    {
+                        let env = Env::from(env);
+                        //let s = env.string("seb").unwrap();
+                        let s = env.string("a𐐀b").unwrap();
+                        //println!("TYPEOF: {:?}", s.type_of().unwrap());
+                        println!("'{}'", s.into_rust().unwrap());
+
+                        // let s: Value<JsObject> = unsafe { std::mem::transmute(s) };
+                        // let res = s.get("length").unwrap();
+                        // let mut result: i32 = 0;
+                        // unsafe { napi_get_value_int32(env.env, *res, &mut result as *mut i32) };
+                        // println!("LENGTH: {}", result);
+                    }
                     match $init(&Env::from(env)) {
                         Ok(export) => export.into_raw(),
                         _ => std::ptr::null_mut()
@@ -385,6 +453,9 @@ macro_rules! register_module {
 }
 
 register_module!(sebastien, |env| {
+    {
+        //let s = env.string("coucou").unwrap();
+    }
     let mut map = std::collections::HashMap::new();
     map.insert(1, "seb");
     map.insert(98, "sylvia");
