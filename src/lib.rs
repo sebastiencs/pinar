@@ -1,5 +1,6 @@
 #![feature(associated_type_defaults)]
 
+use crate::value::ValueType;
 use std::hash::Hash;
 use std::os::raw::c_char;
 use std::marker::PhantomData;
@@ -9,6 +10,7 @@ use napi_sys::*;
 mod status;
 mod value;
 mod module;
+mod downcast;
 
 // use crate::status;
 
@@ -24,7 +26,7 @@ impl Env {
     }
 }
 
-pub struct Value<'e, T = ()> {
+pub struct Value<'e, T> {
     env: &'e Env,
     value: napi_value,
     data: PhantomData<T>
@@ -90,6 +92,14 @@ impl<'e, T> Value<'e, T> {
         };
         Ok(result)
     }
+
+    pub fn type_of(&self) -> Result<ValueType> {
+        unsafe {
+            let mut result: napi_valuetype = std::mem::uninitialized();
+            Status::result(napi_typeof(self.env(), self.value, &mut result as *mut napi_valuetype))?;
+            Ok(ValueType::from(result))
+        }
+    }
 }
 
 use crate::status::Status;
@@ -150,6 +160,21 @@ impl Env {
         }
     }
 }
+
+// trait IntoRust {
+//     fn into_rust<R>() -> R;
+// }
+
+// impl<'e> IntoRust for Value<'e, JsString> {
+//     fn into_rust<String>() -> String {
+//         "445".to_owned()
+//     }
+// }
+
+// impl<'e> Into<String> for Value<'e, JsString> {
+//     fn into(self) -> String {
+//     }
+// }
 
 /// - Named: a simple UTF8-encoded string
 /// - Integer-Indexed: an index value represented by uint32_t
@@ -243,6 +268,16 @@ impl<'a, T> IntoHandle for Value<'a, T> {
     }
 }
 
+impl<'e> Value<'e, JsHandle> {
+    pub fn is_array(&self) -> Result<bool> {
+        unsafe {
+            let mut result: bool = std::mem::uninitialized();
+            Status::result(napi_is_array(self.env(), self.value, &mut result as *mut bool))?;
+            Ok(result)
+        }
+    }
+}
+
 impl<'e> Value<'e, JsObject> {
     pub fn set<K, V>(&self, key: K, value: V) -> Result<()>
     where
@@ -286,7 +321,7 @@ impl<'e> Value<'e, JsArray> {
     {
         let mut value = Value::new(self.env);
         unsafe {
-            Status::result(napi_set_element(self.env(), self.value, index, *value))?;
+            Status::result(napi_get_element(self.env(), self.value, index, value.get_mut()))?;
         };
         match value.is_undefined()? {
             true => Ok(None),
@@ -307,6 +342,8 @@ fn test(env: &Env) {
     let a = test;
 
     let mapjs = map.into_js(env).unwrap();
+
+    //let _ = mapjs.get_handle::<JsString, _>("salut");
 }
 
 #[macro_export]

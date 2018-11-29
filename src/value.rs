@@ -1,6 +1,6 @@
 use napi_sys::*;
 
-enum ValueType {
+pub enum ValueType {
     Undefined,
     Null,
     Boolean,
