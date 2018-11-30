@@ -1,6 +1,6 @@
 use napi_sys::*;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ValueType {
     Undefined,
     Null,

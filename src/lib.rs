@@ -29,7 +29,7 @@ impl Env {
 pub struct Value<'e, T> {
     env: &'e Env,
     value: napi_value,
-    data: PhantomData<T>
+    phantom: PhantomData<T>
 }
 
 impl<'e, T> Deref for Value<'e, T> {
@@ -61,7 +61,7 @@ impl<'e, T> Value<'e, T> {
         Value {
             env,
             value,
-            data: PhantomData
+            phantom: PhantomData
         }
     }
 
@@ -72,8 +72,8 @@ impl<'e, T> Value<'e, T> {
     pub fn new(env: &Env) -> Value<T> {
         Value {
             env: env,
-            value: unsafe { std::mem::uninitialized() },
-            data: PhantomData
+            value: std::ptr::null_mut(),
+            phantom: PhantomData
         }
     }
 
@@ -84,28 +84,31 @@ impl<'e, T> Value<'e, T> {
     }
 
     pub fn is_undefined(&self) -> Result<bool> {
-        let mut result = false;
-        let mut undefined: Value<JsUndefined> = Value::new(self.env);
-        unsafe {
-            Status::result(napi_get_undefined(self.env(), undefined.get_mut()))?;
-            Status::result(napi_strict_equals(self.env(), *undefined, self.value, &mut result as *mut bool))?;
-        };
-        Ok(result)
+        let undefined = self.env.undefined()?;
+        self.is_strict_equals(undefined)
     }
 
     pub fn type_of(&self) -> Result<ValueType> {
         unsafe {
-            let mut result: napi_valuetype = std::mem::uninitialized();
+            let mut result: napi_valuetype = std::mem::zeroed();
             Status::result(napi_typeof(self.env(), self.value, &mut result as *mut napi_valuetype))?;
             Ok(ValueType::from(result))
         }
+    }
+
+    pub fn is_strict_equals<O>(&self, rhs: Value<O>) -> Result<bool> {
+        let mut result: bool = false;
+        unsafe {
+            Status::result(napi_strict_equals(self.env(), self.value, rhs.value, &mut result as *mut bool))?;
+        }
+        Ok(result)
     }
 }
 
 use crate::status::Status;
 
 impl Env {
-    fn object(&self) -> Result<Value<JsObject>> {
+    fn object<'e>(&'e self) -> Result<Value<JsObject>> {
         let mut value = Value::new(self);
         unsafe {
             Status::result(napi_create_object(self.env, value.get_mut()))?
@@ -143,6 +146,38 @@ impl Env {
         unsafe {
             Status::result(napi_create_array_with_length(self.env, cap, value.get_mut()))?
         };
+        Ok(value)
+    }
+
+    pub fn global(&self) -> Result<Value<JsObject>> {
+        let mut global: napi_value = std::ptr::null_mut();
+        Status::result(unsafe {
+            napi_get_global(self.env, &mut global as *mut napi_value)
+        })?;
+        Ok(Value::from(self, global))
+    }
+
+    pub fn null(&self) -> Result<Value<JsHandle>> {
+        let mut null: napi_value = std::ptr::null_mut();
+        Status::result(unsafe {
+            napi_get_global(self.env, &mut null as *mut napi_value)
+        })?;
+        Ok(Value::from(self, null))
+    }
+
+    pub fn undefined(&self) -> Result<Value<JsHandle>> {
+        let mut undefined: napi_value = std::ptr::null_mut();
+        Status::result(unsafe {
+            napi_get_global(self.env, &mut undefined as *mut napi_value)
+        })?;
+        Ok(Value::from(self, undefined))
+    }
+
+    pub fn get_boolean(&self, b: bool) -> Result<Value<JsHandle>> {
+        let mut value = Value::new(self);
+        Status::result(unsafe {
+            napi_get_boolean(self.env, b, value.get_mut())
+        })?;
         Ok(value)
     }
 
@@ -206,7 +241,7 @@ impl<'e> IntoRust<u32> for Value<'e, JsNumber> {
     fn into_rust(self) -> Result<u32> {
         let mut number = 0u32;
         unsafe {
-            Status::result(napi_get_value_int32(self.env(), self.value, &mut number as *mut u32))?;
+            Status::result(napi_get_value_uint32(self.env(), self.value, &mut number as *mut u32))?;
         }
         Ok(number)
     }
@@ -307,7 +342,7 @@ impl<'a, T> IntoHandle for Value<'a, T> {
 impl<'e> Value<'e, JsHandle> {
     pub fn is_array(&self) -> Result<bool> {
         unsafe {
-            let mut result: bool = std::mem::uninitialized();
+            let mut result: bool = false;
             Status::result(napi_is_array(self.env(), self.value, &mut result as *mut bool))?;
             Ok(result)
         }
@@ -353,9 +388,55 @@ impl<'e> Value<'e, JsObject> {
         };
         Ok(value)
     }
+
+    pub fn get_property_names(&self) -> Result<Value<JsArray>> {
+        let mut value = Value::new(self.env);
+        unsafe {
+            Status::result(napi_get_property_names(self.env(), self.value, value.get_mut()))?;
+        };
+        Ok(value)
+    }
+}
+
+pub struct JsArrayIterator<'e> {
+    index: usize,
+    len: usize,
+    array: &'e Value<'e, JsArray>
+}
+
+impl<'e> Iterator for JsArrayIterator<'e> {
+    type Item = Value<'e, JsHandle>;
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            let index = self.index;
+            self.index += 1;
+            if index >= self.len {
+                return None;
+            }
+            if let Ok(Some(item)) = self.array.get(index as u32) {
+                return Some(item);
+            }
+        }
+    }
 }
 
 impl<'e> Value<'e, JsArray> {
+    pub fn iter(&self) -> Result<JsArrayIterator> {
+        Ok(JsArrayIterator {
+            index: 0,
+            array: self,
+            len: self.len()?
+        })
+    }
+
+    pub fn len(&self) -> Result<usize> {
+        let mut len: u32 = 0;
+        unsafe {
+            Status::result(napi_get_array_length(self.env(), self.value, &mut len as *mut u32))?;
+        }
+        Ok(len as usize)
+    }
+
     pub fn set<V>(&self, index: u32, value: V) -> Result<()>
     where
         V: IntoHandle
@@ -405,6 +486,8 @@ macro_rules! register_module {
         #[cfg_attr(target_os = "windows", link_section = ".CRT$XCU")]
         pub static __REGISTER_MODULE: extern "C" fn() = {
             use napi_sys::*;
+            use crate::Env;
+            use crate::downcast::Downcast;
 
             extern "C" fn register_module() {
                 unsafe {
@@ -431,8 +514,22 @@ macro_rules! register_module {
                         let env = Env::from(env);
                         //let s = env.string("seb").unwrap();
                         let s = env.string("a𐐀b").unwrap();
-                        //println!("TYPEOF: {:?}", s.type_of().unwrap());
-                        println!("'{}'", s.into_rust().unwrap());
+                        println!("TYPEOF: {:?}", s.type_of().unwrap());
+                        // println!("'{}'", s.into_rust().unwrap());
+                        let global = env.global().unwrap();
+                        let global = global.get_property_names().unwrap();
+
+                        for v in global.iter().unwrap() {
+                            if v.type_of().unwrap() == ValueType::String {
+                                //let s = v.into_rust();
+                                let s: Value<JsString> = v.downcast().unwrap();
+                                println!("{:?}", s.into_rust());
+                            } else {
+                                println!("{:?}", v.type_of());
+                            }
+                        }
+
+                        println!("global: {:?}", env.global().unwrap().type_of());
 
                         // let s: Value<JsObject> = unsafe { std::mem::transmute(s) };
                         // let res = s.get("length").unwrap();
@@ -454,6 +551,7 @@ macro_rules! register_module {
 
 register_module!(sebastien, |env| {
     {
+        // panic!();
         //let s = env.string("coucou").unwrap();
     }
     let mut map = std::collections::HashMap::new();

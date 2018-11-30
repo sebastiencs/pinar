@@ -4,12 +4,13 @@ use crate::Value;
 use crate::status::Status;
 use crate::value::ValueType;
 
-enum DowncastError {
+#[derive(Debug)]
+pub enum DowncastError {
     Napi(Status),
     FailToCast
 }
 
-trait Downcast<'e, T> {
+pub trait Downcast<'e, T> {
     fn downcast(self) -> std::result::Result<Value<'e, T>, DowncastError>;
 }
 
