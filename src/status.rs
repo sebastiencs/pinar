@@ -1,24 +1,43 @@
 use napi_sys::*;
+use failure::Fail;
 
-#[derive(Debug)]
+#[derive(Fail, Debug)]
 pub enum Status {
+    #[fail(display = "Ok.")]
     Ok,
+    #[fail(display = "Invalid argument.")]
     InvalidArg,
+    #[fail(display = "Object expected.")]
     ObjectExpected,
+    #[fail(display = "String expected.")]
     StringExpected,
+    #[fail(display = "Name expected.")]
     NameExpected,
+    #[fail(display = "Function expected.")]
     FunctionExpected,
+    #[fail(display = "Number expected.")]
     NumberExpected,
+    #[fail(display = "Boolean expected.")]
     BooleanExpected,
+    #[fail(display = "Array expected.")]
     ArrayExpected,
+    #[fail(display = "Generic failure.")]
     GenericFailure,
+    #[fail(display = "Pending exception.")]
     PendingException,
+    #[fail(display = "Cancelled.")]
     Cancelled,
+    #[fail(display = "Escape called twice.")]
     EscapeCalledTwice,
+    #[fail(display = "Handle Ccsope mismatch.")]
     HandleCcopeMismatch,
+    #[fail(display = "Callback scope mismatch.")]
     CallbackScopeMismatch,
+    #[fail(display = "Queue full.")]
     QueueFull,
+    #[fail(display = "Closing.")]
     Closing,
+    #[fail(display = "Bigint expected.")]
     BigintExpected,
 }
 
