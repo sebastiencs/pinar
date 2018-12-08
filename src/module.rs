@@ -11,13 +11,13 @@ use napi_sys::napi_callback_info;
 use napi_sys::napi_env;
 use std::cell::RefCell;
 use napi_sys::napi_value;
-use crate::Arguments;
+use crate::arguments::Arguments;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
-use crate::FromArguments;
+use crate::arguments::FromArguments;
 use crate::JsObject;
 use crate::Value;
-use crate::Env;
+use crate::env::Env;
 use crate::Result;
 use crate::JsValue;
 use crate::jsreturn::JsReturn;
@@ -104,6 +104,7 @@ impl ModuleBuilder {
 
 #[inline]
 pub fn dispatch_function(env: napi_env, info: napi_callback_info) -> napi_value {
+    println!("ENV: {:x?}", env);
     execute_safely(env, || {
         let env = Env::from(env);
         let (fun, args) = env.callback_info::<ModuleFunction>(info)?;
@@ -167,11 +168,11 @@ where
     R: JsReturn
 {
     fn handle(&self, args: &Arguments) -> Result<Option<napi_value>> {
-        let env = args.env;
+        let env = args.env();
         let args = A::from_args(args)?;
 
         Ok((self.fun)(args)
-           .get_result(env)
+           .get_result(*env)
            .map_err(|e| e.into())?
            .map(|res| res.get_value().value))
     }

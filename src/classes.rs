@@ -4,10 +4,9 @@ use std::collections::HashMap;
 use std::ffi::c_void;
 use napi_sys::*;
 use core::marker::PhantomData;
-use crate::Arguments;
 use crate::jsreturn::JsReturn;
-use crate::FromArguments;
-use crate::Env;
+use crate::arguments::{FromArguments, Arguments};
+use crate::env::Env;
 use crate::JsValue;
 use crate::Value;
 use crate::JsFunction;
@@ -22,7 +21,7 @@ use std::any::{TypeId};
 use crate::property_descriptor::PropertyDescriptor;
 use crate::error::JsClassError;
 
-pub trait JsClass: JsClassInternal + Sized {
+pub trait JsClass : Sized {
     type ArgsConstructor: FromArguments;
     type ArgsConstructorRust: 'static;
     const CLASSNAME: &'static str;
@@ -33,7 +32,7 @@ pub trait JsClass: JsClassInternal + Sized {
     fn default_properties(builder: ClassBuilder<Self>) -> ClassBuilder<Self> { builder }
 }
 
-pub trait JsClassInternal {
+trait JsClassInternal {
     unsafe extern "C" fn __pinar_class_constructor(env: napi_env, cb_info: napi_callback_info) -> napi_value;
     unsafe extern "C" fn __pinar_class_dispatch(env: napi_env, cb_info: napi_callback_info) -> napi_value;
     unsafe extern "C" fn __pinar_nop(env: napi_env, cb_info: napi_callback_info) -> napi_value;
@@ -109,14 +108,20 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
 
             let class = Box::new(class);
 
-            this.define_property(PropertyDescriptor::value(&env, Self::CLASS_DATA, copy_class_data)?)?;
+            this.define_property(PropertyDescriptor::value(
+                &env,
+                Self::CLASS_DATA,
+                copy_class_data)?
+            )?;
 
-            Status::result(napi_wrap(env.inner.env,
-                                     this.get_value().value,
-                                     Box::into_raw(class) as *mut c_void,
-                                     Some( __pinar_drop_box::<C>),
-                                     std::ptr::null_mut(),
-                                     std::ptr::null_mut()))?;
+            Status::result(napi_wrap(
+                env.env(),
+                this.get_value().value,
+                Box::into_raw(class) as *mut c_void,
+                Some( __pinar_drop_box::<C>),
+                std::ptr::null_mut(),
+                std::ptr::null_mut()
+            ))?;
 
             Ok(Some(this.get_value().value))
         })
@@ -283,7 +288,7 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
 
         let mut result = Value::new(env);
         unsafe {
-            Status::result(napi_define_class(env.inner.env,
+            Status::result(napi_define_class(env.env(),
                                              self.name.as_ptr() as *const i8,
                                              self.name.len(),
                                              Some(C::__pinar_class_constructor),
@@ -291,7 +296,7 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
                                              props.len(),
                                              props.as_ptr(),
                                              result.get_mut()))?;
-            Status::result(napi_add_finalizer(env.inner.env,
+            Status::result(napi_add_finalizer(env.env(),
                                               result.get(),
                                               data_ptr as *mut c_void,
                                               Some(__pinar_drop_rc::<JsClassData<C>>),
@@ -352,11 +357,11 @@ where
     R: JsReturn
 {
     fn handle(&self, this: &mut C, args: &Arguments) -> Result<Option<napi_value>> {
-        let env = args.env;
+        let env = args.env();
         let args = A::from_args(args)?;
 
         Ok((self.fun)(this, args)
-           .get_result(env)
+           .get_result(*env)
            .map_err(|e| e.into())?
            .map(|res| res.get_value().value))
     }
