@@ -42,6 +42,7 @@ mod external;
 mod objects;
 mod env;
 mod arguments;
+mod function_threadsafe;
 
 mod prelude {
     pub use crate::env::Env;

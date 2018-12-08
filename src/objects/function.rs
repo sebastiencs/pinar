@@ -1,5 +1,6 @@
 
 use crate::*;
+use crate::function_threadsafe::JsFunctionThreadSafe;
 
 pub struct JsFunction {
     pub(crate) value: Value
@@ -43,5 +44,39 @@ impl JsFunction {
                                              result.get_mut()))?;
         }
         Ok(JsObject::from(result))
+    }
+
+    pub fn make_threadsafe<T: MultiJs>(&self) -> Result<JsFunctionThreadSafe<T>> {
+        let mut result: napi_threadsafe_function = std::ptr::null_mut();
+        unsafe {
+            Status::result(napi_create_threadsafe_function(
+                self.value.env(),
+                self.value.get(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                0,
+                1,
+                std::ptr::null_mut(),
+                None,
+                std::ptr::null_mut(),
+                Some(__pinar_threadsafe_function::<T>),
+                &mut result
+            ))?;
+        }
+        Ok(JsFunctionThreadSafe::<T>::new(result))
+    }
+}
+
+unsafe extern "C" fn __pinar_threadsafe_function<T: MultiJs>(
+    env: napi_env,
+    js_callback: napi_value,
+    _context: *mut ::std::os::raw::c_void,
+    data: *mut ::std::os::raw::c_void,
+) {
+    if !env.is_null() && !js_callback.is_null() {
+        let env = Env::from(env);
+        let fun = JsFunction::from(Value::from(env, js_callback));
+        let args: Box<T> = Box::from_raw(data as *mut T);
+        fun.call(*args).ok();
     }
 }
