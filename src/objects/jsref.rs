@@ -1,20 +1,10 @@
 
-use crate::JsSymbol;
-use crate::JsNumber;
-use crate::JsArray;
-use crate::JsObject;
-use crate::JsUndefined;
-use crate::JsFunction;
-use crate::JsExternal;
-use crate::JsString;
 use std::marker::PhantomData;
 use napi_sys::*;
-use crate::JsValue;
-use crate::Value;
 use crate::Result;
-use crate::Env;
-use crate::status::Status;
+use crate::prelude::*;
 
+#[allow(dead_code)]
 pub struct JsRef<T: JsValue> {
     pub(crate) env: Env,
     pub(crate) js_ref: napi_ref,

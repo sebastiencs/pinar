@@ -1,5 +1,4 @@
 
-use core::ops::Deref;
 use crate::value::ValueType;
 use napi_sys::*;
 

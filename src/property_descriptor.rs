@@ -3,7 +3,6 @@ use crate::Env;
 use crate::AsJs;
 use crate::Result;
 use crate::JsValue;
-use std::ffi::CString;
 use napi_sys::*;
 
 // &napi_property_descriptor {
@@ -17,6 +16,7 @@ use napi_sys::*;
 //     data: std::ptr::null_mut(),
 // });
 
+#[allow(dead_code)]
 pub struct PropertyDescriptor {
     name: napi_value,
     method: Option<napi_callback>,

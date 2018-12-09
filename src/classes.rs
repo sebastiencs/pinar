@@ -1,25 +1,13 @@
 
 use std::rc::Rc;
-use std::collections::HashMap;
 use std::ffi::c_void;
 use napi_sys::*;
-use core::marker::PhantomData;
-use crate::jsreturn::JsReturn;
-use crate::arguments::{FromArguments, Arguments};
-use crate::env::Env;
-use crate::JsValue;
-use crate::Value;
-use crate::JsFunction;
-use crate::JsUnknown;
-use crate::Result;
-use crate::JsObject;
-use crate::status::Status;
 use std::ffi::CString;
 use std::any::{TypeId};
-use crate::property_descriptor::PropertyDescriptor;
-use crate::error::JsClassError;
 
 use crate::prelude::*;
+use crate::error::JsClassError;
+use crate::Result;
 
 pub trait JsClass : Sized + 'static {
     type ArgsConstructor: FromArguments;
@@ -398,18 +386,18 @@ impl SomeClass {
         println!("coucou {} {}", a, b);
     }
 
-    pub fn jsfunction(&self, args: (String, i64)) -> String {
+    pub fn jsfunction(&self, _args: (String, i64)) -> String {
         println!("FROM JSFUNCTION {} {:x?}", self.number, self as *const SomeClass);
         "weeesh".to_owned()
     }
-    pub fn jsother(&self, args: (String, i64)) -> i64 {
+    pub fn jsother(&self, _args: (String, i64)) -> i64 {
         println!("FROM JSOTHER", );
         93
     }
-    pub fn jsaccessor(&self, args: Option<String>) -> i64 {
+    pub fn jsaccessor(&self, _args: Option<String>) -> i64 {
         123456
     }
-    pub fn jsbox(&self, args: Option<String>) -> Box<i64> {
+    pub fn jsbox(&self, _args: Option<String>) -> Box<i64> {
         Box::new(64)
     }
 }
@@ -419,6 +407,6 @@ fn test(env: Env) -> Result<()> {
 
     SomeClass::new_instance(&env, (1, 2))?;
 
-    let class = ClassBuilder::<SomeClass>::new_instance(&env, (1, 2))?;
+    let _class = ClassBuilder::<SomeClass>::new_instance(&env, (1, 2))?;
     Ok(())
 }

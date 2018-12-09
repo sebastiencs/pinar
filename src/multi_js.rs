@@ -9,7 +9,7 @@ pub trait MultiJs {
 impl MultiJs for ()
 {
     type Result = Vec<Value>;
-    fn make_iter(self, env: &Env) -> Result<Self::Result> {
+    fn make_iter(self, _env: &Env) -> Result<Self::Result> {
         Ok(vec![])
     }
 }

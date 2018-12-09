@@ -48,8 +48,8 @@ pub enum JsClassError {
 pub enum JsFunctionError {
     #[fail(display = "Multiple overload of the function {} failed.", _0)]
     ArgumentsOverload(String),
-    #[fail(display = "{{ function {} }}: {}.", _0, _1)]
-    Arguments(String, String),
+//    #[fail(display = "{{ function {} }}: {}.", _0, _1)]
+//    Arguments(String, String),
     #[fail(display = "Fail to dispatch the function, please report on pinar repo.")]
     WrongFunctionData,
 }

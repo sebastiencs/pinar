@@ -2,7 +2,7 @@
 use crate::AsJs;
 use crate::classes::__pinar_drop_rc;
 use std::os::raw::c_char;
-use crate::callback_function;
+use crate::__pinar_callback_function;
 use crate::module::ModuleFunction;
 use crate::jsreturn::JsReturn;
 use crate::arguments::{FromArguments, Arguments};
@@ -19,7 +19,6 @@ use crate::{
     JsObject,
     JsArray,
     JsNumber,
-    JsSymbol,
     JsUndefined,
     JsFunction,
     JsExternal,
@@ -193,7 +192,7 @@ impl Env {
                 self.env,
                 name.as_ptr() as *const i8,
                 name.len(),
-                Some(callback_function),
+                Some(__pinar_callback_function),
                 raw as *mut std::ffi::c_void,
                 result.get_mut())
             )?;

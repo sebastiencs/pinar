@@ -4,31 +4,14 @@
 //#![feature(tool_lints)]
 #![feature(core_intrinsics)]
 
-use core::marker::PhantomData;
-use crate::jsreturn::JsReturn;
-use crate::classes::__pinar_drop_rc;
-use crate::module::ModuleFunction;
+use crate::module::__pinar_dispatch_function;
 use std::sync::Arc;
-use crate::external::{External, PtrKind};
 use std::rc::Rc;
-use crate::error::JsExternalError;
-use crate::property_descriptor::PropertyDescriptor;
-use crate::classes::__pinar_drop_box;
-use std::ffi::c_void;
-use crate::error::ArgumentsError;
-use crate::error::Error;
-use crate::module::dispatch_function;
 use std::collections::HashMap;
-use std::cell::Cell;
-use crate::value::ValueType;
 use std::hash::Hash;
-use std::os::raw::c_char;
 use napi_sys::*;
 use crate::module::ModuleBuilder;
-//use crate::env::Env;
 use crate::objects::*;
-use std::ffi::CString;
-use std::any::TypeId;
 use crate::env::Env;
 use crate::as_js::AsJs;
 
@@ -49,7 +32,7 @@ mod multi_js;
 mod as_js;
 mod into_js;
 
-mod prelude {
+pub mod prelude {
     pub use crate::env::Env;
     pub use crate::multi_js::MultiJs;
     pub use crate::objects::*;
@@ -59,9 +42,15 @@ mod prelude {
     pub use crate::to_rust::ToRust;
     pub use crate::function_threadsafe::JsFunctionThreadSafe;
     pub use crate::module::ModuleBuilder;
+    pub use crate::property_descriptor::PropertyDescriptor;
+    pub use crate::jsreturn::JsReturn;
+    pub use crate::module::__pinar_dispatch_function;
+    pub use crate::arguments::{FromArguments, Arguments};
+    pub use crate::classes::{JsClass, ClassBuilder};
 }
 
-type Result<R> = std::result::Result<R, Error>;
+pub type Result<R> = std::result::Result<R, Error>;
+pub use crate::error::Error;
 
 fn testfn(fun: JsFunction) {
     fun.call((1, "seb")).ok();
@@ -147,8 +136,8 @@ macro_rules! register_module {
             register_module
         };
 
-        unsafe extern "C" fn callback_function(env: napi_env, info: napi_callback_info) -> napi_value {
-            dispatch_function(env, info)
+        unsafe extern "C" fn __pinar_callback_function(env: napi_env, info: napi_callback_info) -> napi_value {
+            __pinar_dispatch_function(env, info)
         }
     };
 }

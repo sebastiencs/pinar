@@ -111,7 +111,7 @@ macro_rules! impl_jsref {
     ) => {
         $(
             impl JsRef<$jstype> {
-                fn get(&self) -> Result<$jstype> {
+                pub fn get(&self) -> Result<$jstype> {
                     let mut result = Value::new(self.env);
                     unsafe {
                         Status::result(napi_get_reference_value(

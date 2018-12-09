@@ -1,27 +1,16 @@
 
 //use crate::IntoHandle;
 use crate::classes::execute_safely;
-use crate::classes::JsClass;
-use crate::classes::ClassBuilder;
-use crate::JsFunction;
 use crate::error::ArgumentsError;
 use crate::error::JsFunctionError;
-use crate::error::Error;
-use napi_sys::napi_callback_info;
-use napi_sys::napi_env;
-use std::cell::RefCell;
-use napi_sys::napi_value;
+use napi_sys::*;
 use crate::arguments::Arguments;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
-use crate::arguments::FromArguments;
-use crate::JsObject;
-use crate::Value;
-use crate::env::Env;
-use crate::Result;
-use crate::JsValue;
-use crate::jsreturn::JsReturn;
 use std::rc::Rc;
+
+use crate::prelude::*;
+use crate::Result;
 
 pub struct ModuleBuilder
 {
@@ -103,7 +92,7 @@ impl ModuleBuilder {
 }
 
 #[inline]
-pub fn dispatch_function(env: napi_env, info: napi_callback_info) -> napi_value {
+pub fn __pinar_dispatch_function(env: napi_env, info: napi_callback_info) -> napi_value {
     println!("ENV: {:x?}", env);
     execute_safely(env, || {
         let env = Env::from(env);
