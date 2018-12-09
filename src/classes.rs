@@ -15,21 +15,24 @@ use crate::Result;
 use crate::JsObject;
 use crate::status::Status;
 use std::ffi::CString;
-use crate::IntoRust;
-use crate::IntoJs;
 use std::any::{TypeId};
 use crate::property_descriptor::PropertyDescriptor;
 use crate::error::JsClassError;
 
-pub trait JsClass : Sized {
+use crate::prelude::*;
+
+pub trait JsClass : Sized + 'static {
     type ArgsConstructor: FromArguments;
     type ArgsConstructorRust: 'static;
     const CLASSNAME: &'static str;
 
     fn constructor(args: Self::ArgsConstructor) -> Result<Self> ;
     fn constructor_rust(args: Self::ArgsConstructorRust) -> Result<Self>;
-
     fn default_properties(builder: ClassBuilder<Self>) -> ClassBuilder<Self> { builder }
+
+    fn new_instance(env: &Env, args: Self::ArgsConstructorRust) -> Result<JsObject> {
+        ClassBuilder::<Self>::new_instance(env, args)
+    }
 }
 
 trait JsClassInternal {
@@ -40,20 +43,13 @@ trait JsClassInternal {
     const PINAR_CLASS_ID: &'static str;
 }
 
-// pub unsafe extern "C" fn __pinar_drop<T>(_env: napi_env, data: *mut c_void, _finalize_hint: *mut c_void) {
-//     println!("DROPPING {:?} {:x?}", std::intrinsics::type_name::<T>(), data);
-//     if std::mem::needs_drop::<T>() {
-//         std::ptr::drop_in_place::<T>(data as *mut T);
-//     }
-// }
-
 pub unsafe extern "C" fn __pinar_drop_box<T>(_env: napi_env, data: *mut c_void, _finalize_hint: *mut c_void) {
-    println!("DROPPING BOX {:?} {:x?}", std::intrinsics::type_name::<T>(), data);
+    // println!("DROPPING BOX {:?} {:x?}", std::intrinsics::type_name::<T>(), data);
     Box::<T>::from_raw(data as *mut T);
 }
 
 pub unsafe extern "C" fn __pinar_drop_rc<T>(_env: napi_env, data: *mut c_void, _finalize_hint: *mut c_void) {
-    println!("DROPPING RC {:?} {:x?}", std::intrinsics::type_name::<T>(), data);
+    // println!("DROPPING RC {:?} {:x?}", std::intrinsics::type_name::<T>(), data);
     Rc::<T>::from_raw(data as *mut T);
 }
 
@@ -249,7 +245,7 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
         self
     }
 
-    fn create_internal(&self, env: Env, args_rust: Option<C::ArgsConstructorRust>) -> Result<JsFunction> {
+    fn create_internal(&self, env: &Env, args_rust: Option<C::ArgsConstructorRust>) -> Result<JsFunction> {
         let mut props: Vec<_> = self.props.iter().enumerate().map(|(index, prop)| { napi_property_descriptor {
             utf8name: prop.name.as_ptr() as *const i8,
             name: std::ptr::null_mut(),
@@ -286,31 +282,35 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
             args_rust
         }));
 
-        let mut result = Value::new(env);
+        let mut result = Value::new(*env);
         unsafe {
-            Status::result(napi_define_class(env.env(),
-                                             self.name.as_ptr() as *const i8,
-                                             self.name.len(),
-                                             Some(C::__pinar_class_constructor),
-                                             data_ptr as *mut c_void,
-                                             props.len(),
-                                             props.as_ptr(),
-                                             result.get_mut()))?;
-            Status::result(napi_add_finalizer(env.env(),
-                                              result.get(),
-                                              data_ptr as *mut c_void,
-                                              Some(__pinar_drop_rc::<JsClassData<C>>),
-                                              std::ptr::null_mut(),
-                                              std::ptr::null_mut()))?;
+            Status::result(napi_define_class(
+                env.env(),
+                self.name.as_ptr() as *const i8,
+                self.name.len(),
+                Some(C::__pinar_class_constructor),
+                data_ptr as *mut c_void,
+                props.len(),
+                props.as_ptr(),
+                result.get_mut()
+            ))?;
+            Status::result(napi_add_finalizer(
+                env.env(),
+                result.get(),
+                data_ptr as *mut c_void,
+                Some(__pinar_drop_rc::<JsClassData<C>>),
+                std::ptr::null_mut(),
+                std::ptr::null_mut()
+            ))?;
         }
         Ok(JsFunction::from(result))
     }
 
-    pub fn create(&self, env: Env) -> Result<JsFunction> {
+    pub fn create(&self, env: &Env) -> Result<JsFunction> {
         self.create_internal(env, None)
     }
 
-    pub fn new_instance(env: Env, args: C::ArgsConstructorRust) -> Result<JsObject> {
+    pub fn new_instance(env: &Env, args: C::ArgsConstructorRust) -> Result<JsObject> {
         let builder = ClassBuilder::<C>::default();
         let fun = builder.create_internal(env, Some(args))?;
         fun.new_instance(())
@@ -362,7 +362,7 @@ where
 
         Ok((self.fun)(this, args)
            .get_result(*env)
-           .map_err(|e| e.into())?
+           .map_err(Into::into)?
            .map(|res| res.get_value().value))
     }
 }
@@ -373,7 +373,6 @@ impl JsClass for SomeClass {
     type ArgsConstructorRust = (i64, i64);
 
     fn constructor(arg: Self::ArgsConstructor) -> Result<Self> {
-        //println!("CONSTRUCTOR: {:?}", arg);
         Ok(SomeClass{ number: arg.1 })
     }
 
@@ -416,7 +415,10 @@ impl SomeClass {
 }
 
 fn test(env: Env) -> Result<()> {
-//    ClassBuilder::<SomeClass>::start_build();
-    let class = ClassBuilder::<SomeClass>::new_instance(env, (1, 2))?;
+    //    ClassBuilder::<SomeClass>::start_build();
+
+    SomeClass::new_instance(&env, (1, 2))?;
+
+    let class = ClassBuilder::<SomeClass>::new_instance(&env, (1, 2))?;
     Ok(())
 }

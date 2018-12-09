@@ -1,5 +1,8 @@
 
-use crate::*;
+use std::os::raw::c_char;
+use napi_sys::*;
+use crate::prelude::*;
+use crate::Result;
 
 pub struct JsString {
     pub(crate) value: Value

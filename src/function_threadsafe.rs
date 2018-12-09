@@ -1,14 +1,15 @@
 
 use std::ffi::c_void;
 use std::marker::PhantomData;
-use crate::MultiJs;
-use crate::IntoJs;
+use crate::multi_js::MultiJs;
+// use crate::IntoJs;
 use std::cell::Cell;
 use crate::arguments::FromArguments;
 use napi_sys::*;
 use crate::objects::*;
 use crate::Result;
 use crate::status::Status;
+use crate::prelude::*;
 
 pub struct JsFunctionThreadSafe<T: MultiJs> {
     fun: napi_threadsafe_function,

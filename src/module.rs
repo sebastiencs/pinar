@@ -83,7 +83,7 @@ impl ModuleBuilder {
     }
 
     pub fn with_class<C: 'static +  JsClass>(mut self, name: impl Into<String>, fun: impl Fn() -> ClassBuilder<C>) -> Self {
-        let fun = fun().create(self.env).unwrap();
+        let fun = fun().create(&self.env).unwrap();
         self.classes.push((name.into(), fun));
         self
     }

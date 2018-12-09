@@ -1,6 +1,7 @@
 
-use crate::*;
+use crate::prelude::*;
 use crate::function_threadsafe::JsFunctionThreadSafe;
+use crate::*;
 
 pub struct JsFunction {
     pub(crate) value: Value

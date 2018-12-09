@@ -15,8 +15,9 @@ panic = "unwind"
 
 [dependencies]
 #napi-sys = "0.1"
+#napi-sys = "0.1.1"
 napi-sys = { path = "../napi-sys" }
-parking_lot = "0.7"
+#parking_lot = "0.7"
 #slotmap = "0.3"
 # slab = "0.4"
 failure = "0.1.3"

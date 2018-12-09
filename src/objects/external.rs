@@ -1,5 +1,11 @@
 
-use crate::*;
+use crate::error::JsExternalError;
+use std::sync::Arc;
+use std::rc::Rc;
+use napi_sys::*;
+use crate::prelude::*;
+use crate::external::External;
+use crate::Result;
 
 pub struct JsExternal {
     pub(crate) value: Value

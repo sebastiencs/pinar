@@ -33,10 +33,6 @@ pub struct Env {
     env: napi_env
 }
 
-// impl Deref for Env {
-
-// }
-
 impl Env {
     pub(crate) fn env(&self) -> napi_env {
         self.env

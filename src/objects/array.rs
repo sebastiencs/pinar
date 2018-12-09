@@ -1,5 +1,7 @@
 
-use crate::*;
+use napi_sys::*;
+use crate::prelude::*;
+use crate::Result;
 
 pub struct JsArray {
     pub(crate) value: Value

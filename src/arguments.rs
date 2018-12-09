@@ -2,6 +2,7 @@ use napi_sys::*;
 use std::cell::Cell;
 
 use crate::env::Env;
+use crate::to_rust::ToRust;
 use crate::*;
 
 pub struct Arguments {
@@ -155,7 +156,7 @@ macro_rules! from_args_js {
             {
                 fn from_args(args: &Arguments) -> Result<Self> {
                     match args.next_arg() {
-                        Some(JsUnknown::$rutype(value)) => value.into_rust(),
+                        Some(JsUnknown::$rutype(value)) => value.to_rust(),
                         Some(_) => Err(ArgumentsError::wrong_type($rstr, args.arg_number())),
                         _ => Err(ArgumentsError::missing(args.arg_number()))
                     }
