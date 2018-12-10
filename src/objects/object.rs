@@ -10,11 +10,11 @@ pub struct JsObject {
 impl JsObject {
     pub fn set<K, V>(&self, key: K, value: V) -> Result<()>
     where
-        K: KeyProperty + AsJs,
-        V: AsJs
+        K: KeyProperty + ToJs,
+        V: ToJs
     {
-        let key = key.as_js(&self.value.env)?.get_value();
-        let value = value.as_js(&self.value.env)?.get_value();
+        let key = key.to_js(&self.value.env)?.get_value();
+        let value = value.to_js(&self.value.env)?.get_value();
         unsafe {
             Status::result(napi_set_property(self.value.env(), self.value.get(), key.get(), value.get()))?;
         };
@@ -23,9 +23,9 @@ impl JsObject {
 
     pub fn get<K>(&self, key: K) -> Result<JsUnknown>
     where
-        K: KeyProperty + AsJs
+        K: KeyProperty + ToJs
     {
-        let key = key.as_js(&self.value.env)?.get_value();
+        let key = key.to_js(&self.value.env)?.get_value();
         let mut value = Value::new(self.value.env);
         unsafe {
             Status::result(napi_get_property(self.value.env(), self.value.get(), key.get(), value.get_mut()))?;
@@ -43,10 +43,10 @@ impl JsObject {
 
     pub fn has_property<K>(&self, key: K) -> Result<bool>
     where
-        K: KeyProperty + AsJs
+        K: KeyProperty + ToJs
     {
         let mut result = false;
-        let key = key.as_js(&self.value.env)?.get_value();
+        let key = key.to_js(&self.value.env)?.get_value();
         unsafe {
             Status::result(napi_has_property(self.value.env(), self.value.get(), key.get(), &mut result))?;
         };
@@ -55,10 +55,10 @@ impl JsObject {
 
     pub fn has_own_property<K>(&self, key: K) -> Result<bool>
     where
-        K: KeyProperty + AsJs
+        K: KeyProperty + ToJs
     {
         let mut result = false;
-        let key = key.as_js(&self.value.env)?.get_value();
+        let key = key.to_js(&self.value.env)?.get_value();
         unsafe {
             Status::result(napi_has_own_property(self.value.env(), self.value.get(), key.get(), &mut result))?;
         };
@@ -67,10 +67,10 @@ impl JsObject {
 
     pub fn delete_property<K>(&self, key: K) -> Result<bool>
     where
-        K: KeyProperty + AsJs
+        K: KeyProperty + ToJs
     {
         let mut result = false;
-        let key = key.as_js(&self.value.env)?.get_value();
+        let key = key.to_js(&self.value.env)?.get_value();
         unsafe {
             Status::result(napi_delete_property(
                 self.value.env(),
@@ -128,6 +128,7 @@ pub trait KeyProperty {}
 impl KeyProperty for JsString {}
 impl KeyProperty for JsNumber {}
 impl KeyProperty for JsSymbol {}
+impl KeyProperty for Value {}
 impl KeyProperty for &'_ str {}
 impl KeyProperty for String {}
 impl KeyProperty for i64 {}

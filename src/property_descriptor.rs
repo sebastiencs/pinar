@@ -1,6 +1,6 @@
 
 use crate::Env;
-use crate::AsJs;
+use crate::ToJs;
 use crate::Result;
 use crate::JsValue;
 use napi_sys::*;
@@ -49,12 +49,12 @@ impl PropertyDescriptor {
         })
     }
 
-    pub fn value<S: AsRef<str>, V: AsJs>(env: &Env, name: S, value: V) -> Result<Self> {
+    pub fn value<S: AsRef<str>, V: ToJs>(env: &Env, name: S, value: V) -> Result<Self> {
         Ok(PropertyDescriptor {
             name: env.string(name.as_ref())?.get_value().value,
             method: None,
             setter_getter: None,
-            value: Some(value.as_js(env)?.get_value().value),
+            value: Some(value.to_js(env)?.get_value().value),
             attributes: napi_property_attributes::napi_default,
             data: ()
         })

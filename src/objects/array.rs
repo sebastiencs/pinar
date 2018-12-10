@@ -30,9 +30,9 @@ impl JsArray {
 
     pub fn set<V>(&self, index: u32, value: V) -> Result<()>
     where
-        V: AsJs
+        V: ToJs
     {
-        let value = value.as_js(&self.value.env)?.get_value();
+        let value = value.to_js(&self.value.env)?.get_value();
         unsafe {
             Status::result(napi_set_element(
                 self.value.env(),

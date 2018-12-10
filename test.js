@@ -44,6 +44,8 @@
   console.log("EASY:", myclass2.easy("seb", 234));
   console.log("EASY:", myclass.easy("seb", 234));
   console.log("EASY:", myclass.easy4);
+  console.log("STRUCT:", a.test9());
+  console.log("BOX:", a.test10());
   //let myclass3 = a.someclass("salut toi", 25);
   //console.log("EASY:", myclass3);
 }

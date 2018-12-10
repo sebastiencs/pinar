@@ -58,7 +58,7 @@ macro_rules! from_args_tuples {
             where
                 $($tuple : FromArguments,)*
             {
-                #[allow(non_snake_case)]
+                #[allow(non_snake_case, unused_variables)]
                 fn from_args(args: &Arguments) -> Result<Self> {
                     // FromArguments::from_args needs to be called in order
                     $(let $tuple = $tuple::from_args(args)?;)*
@@ -70,6 +70,7 @@ macro_rules! from_args_tuples {
 }
 
 from_args_tuples!(
+    (),
     (A),
     (A, B),
     (A, B, C),

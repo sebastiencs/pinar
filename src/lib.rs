@@ -13,7 +13,7 @@ use napi_sys::*;
 use crate::module::ModuleBuilder;
 use crate::objects::*;
 use crate::env::Env;
-use crate::as_js::AsJs;
+use crate::to_js::ToJs;
 
 mod status;
 mod value;
@@ -29,16 +29,17 @@ mod arguments;
 mod function_threadsafe;
 mod to_rust;
 mod multi_js;
-mod as_js;
-mod into_js;
+mod to_js;
+
+#[cfg(feature = "pinar-serde")]
+mod pinar_serde;
 
 pub mod prelude {
     pub use crate::env::Env;
     pub use crate::multi_js::MultiJs;
     pub use crate::objects::*;
     pub use crate::status::Status;
-    pub use crate::as_js::AsJs;
-    pub use crate::into_js::IntoJs;
+    pub use crate::to_js::ToJs;
     pub use crate::to_rust::ToRust;
     pub use crate::function_threadsafe::JsFunctionThreadSafe;
     pub use crate::module::ModuleBuilder;
@@ -47,15 +48,43 @@ pub mod prelude {
     pub use crate::module::__pinar_dispatch_function;
     pub use crate::arguments::{FromArguments, Arguments};
     pub use crate::classes::{JsClass, ClassBuilder};
+    #[cfg(feature = "pinar-serde")]
+    pub use crate::pinar_serde::ser::serialize_to_js;
 }
 
 pub type Result<R> = std::result::Result<R, Error>;
 pub use crate::error::Error;
 
+use crate::pinar_serde::ser::serialize_to_js;
+
 fn testfn(fun: JsFunction) {
     fun.call((1, "seb")).ok();
     fun.call(()).ok();
     fun.call((234, "coucou", vec![1, 2, 3])).ok();
+    fun.call(vec![1, 2, 3]).ok();
+    fun.call("salut").ok();
+    fun.call(10).ok();
+}
+
+use serde_derive::Serialize;
+
+use pinar_derive::ToJs;
+
+#[derive(Serialize)]
+enum TestEnum {
+    A(String),
+    B(usize),
+    C(Vec<usize>),
+    D(Option<usize>),
+    E(Box<usize>)
+}
+
+#[derive(Serialize, ToJs)]
+struct ABC {
+    a: i32,
+    b: i32,
+    c: i32,
+    d: TestEnum
 }
 
 fn test1(args: (Env, String)) {
@@ -98,6 +127,19 @@ fn test7(args: i64) -> i64 {
 fn test8(args: Option<i64>) -> Result<Option<i64>> {
     println!("ARGS: {:?}", args);
     Ok(args)
+}
+
+fn test9(args: ()) -> ABC {
+    ABC {
+        a: 10,
+        b: 31,
+        c: 22,
+        d: TestEnum::E(Box::new(123))
+    }
+}
+
+fn test10(args: ()) -> Box<usize> {
+    Box::new(1234)
 }
 
 #[macro_export]
@@ -154,12 +196,14 @@ register_module!(sebastien, |module: ModuleBuilder| {
           .with_function("test6", test6)
           .with_function("test7", test7)
           .with_function("test8", test8)
+          .with_function("test9", test9)
+          .with_function("test10", test10)
           .with_class("someclass", || {
               ClassBuilder::<SomeClass>::start_build()
                   .with_method("easy", SomeClass::jsfunction)
                   .with_method("easy2", SomeClass::jsother)
                   .with_accessor("easy3", SomeClass::jsaccessor)
-                  .with_accessor("easy4", SomeClass::jsbox)
+                  // .with_accessor("easy4", SomeClass::jsbox)
           })
           .build()
 });

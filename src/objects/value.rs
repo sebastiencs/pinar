@@ -1,4 +1,5 @@
 
+use crate::objects::JsValue;
 use crate::value::ValueType;
 use napi_sys::*;
 
@@ -10,6 +11,13 @@ use crate::status::Status;
 pub struct Value {
     pub(crate) env: Env,
     pub(crate) value: napi_value
+}
+
+impl JsValue for Value {
+    #[inline]
+    fn get_value(&self) -> Value {
+        *self
+    }
 }
 
 impl Value {

@@ -2,7 +2,7 @@ use crate::JsUndefined;
 use crate::JsValue;
 use crate::Env;
 use crate::error::Error;
-use crate::AsJs;
+use crate::ToJs;
 
 pub trait JsReturn {
     type Value: JsValue;
@@ -12,12 +12,12 @@ pub trait JsReturn {
 
 impl<T> JsReturn for T
 where
-    T: AsJs
+    T: ToJs
 {
-    type Value = T::JsType;
+    type Value = T::Value;
     type Error = Error;
     fn get_result(self, env: Env) -> Result<Option<Self::Value>, Self::Error> {
-        Ok(Some(self.as_js(&env)?))
+        Ok(Some(self.to_js(&env)?))
     }
 }
 

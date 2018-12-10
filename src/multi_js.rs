@@ -6,22 +6,14 @@ pub trait MultiJs {
     fn make_iter(self, env: &Env) -> Result<Self::Result>;
 }
 
-impl MultiJs for ()
-{
-    type Result = Vec<Value>;
-    fn make_iter(self, _env: &Env) -> Result<Self::Result> {
-        Ok(vec![])
-    }
-}
-
 impl<A> MultiJs for A
 where
-    A: AsJs,
+    A: ToJs,
 {
     type Result = Vec<Value>;
     fn make_iter(self, env: &Env) -> Result<Self::Result> {
         Ok(vec![
-            self.as_js(env)?.get_value(),
+            self.to_js(env)?.get_value(),
         ])
     }
 }
@@ -33,12 +25,13 @@ macro_rules! multi_js_tuples {
         $(
             impl<$($tuple),*> MultiJs for ($($tuple,)*)
             where
-                $($tuple : AsJs,)*
+                $($tuple : ToJs,)*
             {
                 type Result = Vec<Value>;
+                #[allow(unused_variables)]
                 fn make_iter(self, env: &Env) -> Result<Self::Result> {
                     Ok(vec![
-                        $(self.$n.as_js(env)?.get_value(),)*
+                        $(self.$n.to_js(env)?.get_value(),)*
                     ])
                 }
             }
@@ -47,6 +40,7 @@ macro_rules! multi_js_tuples {
 }
 
 multi_js_tuples!(
+    (),
     (A,0),
     (A,0,B,1),
     (A,0,B,1,C,2),

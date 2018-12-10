@@ -93,7 +93,6 @@ impl ModuleBuilder {
 
 #[inline]
 pub fn __pinar_dispatch_function(env: napi_env, info: napi_callback_info) -> napi_value {
-    println!("ENV: {:x?}", env);
     execute_safely(env, || {
         let env = Env::from(env);
         let (fun, args) = env.callback_info::<ModuleFunction>(info)?;

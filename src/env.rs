@@ -1,5 +1,5 @@
 
-use crate::AsJs;
+use crate::ToJs;
 use crate::classes::__pinar_drop_rc;
 use std::os::raw::c_char;
 use crate::__pinar_callback_function;
@@ -23,6 +23,8 @@ use crate::{
     JsFunction,
     JsExternal,
     JsUnknown,
+    JsBoolean,
+    JsNull,
 };
 use crate::{Result, Value, JsValue};
 use crate::status::Status;
@@ -39,6 +41,30 @@ impl Env {
 
     pub(crate) fn from(env: napi_env) -> Env {
         Env { env }
+    }
+
+    pub fn boolean(&self, b: bool) -> Result<JsBoolean> {
+        let mut value = Value::new(*self);
+        unsafe {
+            Status::result(napi_get_boolean(
+                self.env,
+                b,
+                value.get_mut())
+            )?
+        };
+        Ok(JsBoolean::from(value))
+    }
+
+    pub fn double(&self, d: f64) -> Result<JsNumber> {
+        let mut value = Value::new(*self);
+        unsafe {
+            Status::result(napi_create_double(
+                self.env,
+                d,
+                value.get_mut())
+            )?
+        };
+        Ok(JsNumber::from(value))
     }
 
     pub fn object(&self) -> Result<JsObject> {
@@ -121,6 +147,17 @@ impl Env {
             )?
         };
         Ok(JsUndefined::from(undefined))
+    }
+
+    pub fn null(&self) -> Result<JsNull> {
+        let mut null = Value::new(*self);
+        unsafe {
+            Status::result(napi_get_null(
+                self.env,
+                null.get_mut())
+            )?
+        };
+        Ok(JsNull::from(null))
     }
 
     pub fn external_box<T: 'static>(&self, ptr: Box<T>) -> Result<JsExternal> {
@@ -233,9 +270,9 @@ impl Env {
 
     pub fn throw<V>(&self, error: V) -> Result<()>
     where
-        V: AsJs
+        V: ToJs
     {
-        let error = error.as_js(&self)?.get_value();
+        let error = error.to_js(&self)?.get_value();
         unsafe {
             Status::result(napi_throw(self.env, error.get()))?;
         }
