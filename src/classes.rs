@@ -10,15 +10,13 @@ use crate::error::JsClassError;
 use crate::Result;
 
 pub trait JsClass : Sized + 'static {
-    type ArgsConstructor: FromArguments;
-    type ArgsConstructorRust: 'static;
     const CLASSNAME: &'static str;
+    type ArgsConstructor: FromArguments;
 
     fn constructor(args: Self::ArgsConstructor) -> Result<Self> ;
-    fn constructor_rust(args: Self::ArgsConstructorRust) -> Result<Self>;
-    fn default_properties(builder: ClassBuilder<Self>) -> ClassBuilder<Self> { builder }
 
-    fn new_instance(env: &Env, args: Self::ArgsConstructorRust) -> Result<JsObject> {
+    fn default_properties(builder: ClassBuilder<Self>) -> ClassBuilder<Self> { builder }
+    fn new_instance(env: &Env, args: Self::ArgsConstructor) -> Result<JsObject> {
         ClassBuilder::<Self>::new_instance(env, args)
     }
 }
@@ -85,7 +83,7 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
 
             let class = if copy_class_data.args_rust.is_some() {
                 let args_rust = Rc::make_mut(&mut copy_class_data).args_rust.take().unwrap();
-                Self::constructor_rust(args_rust)?
+                Self::constructor(args_rust)?
             } else {
                 Self::constructor(FromArguments::from_args(&args)?)?
             };
@@ -95,8 +93,8 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
             this.define_property(PropertyDescriptor::value(
                 &env,
                 Self::CLASS_DATA,
-                copy_class_data)?
-            )?;
+                copy_class_data
+            )?)?;
 
             Status::result(napi_wrap(
                 env.env(),
@@ -143,11 +141,11 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
 
 pub struct JsClassData<C: JsClass> {
     id: TypeId,
-    args_rust: Option<C::ArgsConstructorRust>,
+    args_rust: Option<C::ArgsConstructor>,
     methods: Vec<Rc<ClassMethodHandler<C>>>
 }
 
-// Implement Clone ourself because ArgsConstructorRust might not be clonable
+// Implement Clone ourself because ArgsConstructor might not be clonable
 impl<C: JsClass> Clone for JsClassData<C> {
     fn clone(&self) -> Self {
         JsClassData {
@@ -233,7 +231,7 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
         self
     }
 
-    fn create_internal<'e>(&self, env: &Env, args_rust: Option<C::ArgsConstructorRust>) -> Result<JsFunction<'e>> {
+    fn create_internal<'e>(&self, env: &Env, args_rust: Option<C::ArgsConstructor>) -> Result<JsFunction<'e>> {
         let mut props: Vec<_> = self.props.iter().enumerate().map(|(index, prop)| { napi_property_descriptor {
             utf8name: prop.name.as_ptr() as *const i8,
             name: std::ptr::null_mut(),
@@ -298,7 +296,7 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
         self.create_internal(env, None)
     }
 
-    pub fn new_instance<'e>(env: &Env, args: C::ArgsConstructorRust) -> Result<JsObject<'e>> {
+    pub fn new_instance<'e>(env: &Env, args: C::ArgsConstructor) -> Result<JsObject<'e>> {
         let builder = ClassBuilder::<C>::default();
         let fun = builder.create_internal(env, Some(args))?;
         fun.new_instance(())
@@ -358,14 +356,9 @@ where
 impl JsClass for SomeClass {
     const CLASSNAME: &'static str = "RustClass";
     type ArgsConstructor = (String, i64);
-    type ArgsConstructorRust = (i64, i64);
 
     fn constructor(arg: Self::ArgsConstructor) -> Result<Self> {
         Ok(SomeClass{ number: arg.1 })
-    }
-
-    fn constructor_rust(_: Self::ArgsConstructorRust) -> Result<Self> {
-        Ok(SomeClass{ number: 93 })
     }
 
     fn default_properties(builder: ClassBuilder<Self>) -> ClassBuilder<Self> {
@@ -405,8 +398,8 @@ impl SomeClass {
 fn test(env: Env) -> Result<()> {
     //    ClassBuilder::<SomeClass>::start_build();
 
-    SomeClass::new_instance(&env, (1, 2))?;
+    SomeClass::new_instance(&env, (String::from("seb"), 2))?;
 
-    let _class = ClassBuilder::<SomeClass>::new_instance(&env, (1, 2))?;
+    let _class = ClassBuilder::<SomeClass>::new_instance(&env, (String::from("seb"), 2))?;
     Ok(())
 }

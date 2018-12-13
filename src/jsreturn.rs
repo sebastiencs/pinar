@@ -29,7 +29,7 @@ where
     type Error = Error;
     fn get_result(self, env: Env) -> Result<Option<Self::Value>, Self::Error> {
         match self {
-            Some(v) => v.get_result(env).map_err(|e| e.into()),
+            Some(v) => v.get_result(env).map_err(Into::into),
             None => Ok(None)
         }
     }
@@ -42,7 +42,7 @@ where
     type Value = T::Value;
     type Error = Error;
     fn get_result(self, env: Env) -> Result<Option<Self::Value>, Self::Error> {
-        self?.get_result(env).map_err(|e| e.into())
+        self?.get_result(env).map_err(Into::into)
     }
 }
 

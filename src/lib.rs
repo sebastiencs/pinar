@@ -147,7 +147,7 @@ fn test9(args: ()) -> ABC {
     }
 }
 
-fn test10(args: ()) -> Box<usize> {
+fn test10(_: ()) -> Box<usize> {
     Box::new(1234)
 }
 
