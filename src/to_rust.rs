@@ -10,7 +10,7 @@ pub trait ToRust<R> {
     fn to_rust(&self) -> Result<R>;
 }
 
-impl ToRust<String> for JsString
+impl<'e> ToRust<String> for JsString<'e>
 {
     fn to_rust(&self) -> Result<String> {
         let len = self.len()?;
@@ -31,7 +31,7 @@ impl ToRust<String> for JsString
     }
 }
 
-impl ToRust<i64> for JsNumber {
+impl<'e> ToRust<i64> for JsNumber<'e> {
     fn to_rust(&self) -> Result<i64> {
         let mut number = 0i64;
         unsafe {
@@ -45,7 +45,7 @@ impl ToRust<i64> for JsNumber {
     }
 }
 
-impl ToRust<i32> for JsNumber {
+impl<'e> ToRust<i32> for JsNumber<'e> {
     fn to_rust(&self) -> Result<i32> {
         let mut number = 0i32;
         unsafe {
@@ -59,7 +59,7 @@ impl ToRust<i32> for JsNumber {
     }
 }
 
-impl ToRust<u32> for JsNumber {
+impl<'e> ToRust<u32> for JsNumber<'e> {
     fn to_rust(&self) -> Result<u32> {
         let mut number = 0u32;
         unsafe {
@@ -73,7 +73,7 @@ impl ToRust<u32> for JsNumber {
     }
 }
 
-impl ToRust<f64> for JsNumber {
+impl<'e> ToRust<f64> for JsNumber<'e> {
     fn to_rust(&self) -> Result<f64> {
         let mut number = 0f64;
         unsafe {
@@ -87,7 +87,7 @@ impl ToRust<f64> for JsNumber {
     }
 }
 
-impl ToRust<bool> for JsBoolean {
+impl<'e> ToRust<bool> for JsBoolean<'e> {
     fn to_rust(&self) -> Result<bool> {
         let mut result = false;
         unsafe {
@@ -101,21 +101,21 @@ impl ToRust<bool> for JsBoolean {
     }
 }
 
-impl<T: 'static> ToRust<Arc<T>> for JsExternal
+impl<'e, T: 'static> ToRust<Arc<T>> for JsExternal<'e>
 {
     fn to_rust(&self) -> Result<Arc<T>> {
         self.get_arc()
     }
 }
 
-impl<T: 'static> ToRust<Rc<T>> for JsExternal
+impl<'e, T: 'static> ToRust<Rc<T>> for JsExternal<'e>
 {
     fn to_rust(&self) -> Result<Rc<T>> {
         self.get_rc()
     }
 }
 
-impl<T: 'static> ToRust<Box<T>> for JsExternal
+impl<'e, T: 'static> ToRust<Box<T>> for JsExternal<'e>
 {
     fn to_rust(&self) -> Result<Box<T>> {
         match self.take_box()? {

@@ -1,6 +1,8 @@
 
+use std::marker::PhantomData;
 use super::*;
 
-pub struct JsNumber {
-    pub(crate) value: Value
+pub struct JsNumber<'e> {
+    pub(crate) value: Value,
+    pub(crate) phantom: PhantomData<&'e ()>
 }

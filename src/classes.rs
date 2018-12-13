@@ -174,7 +174,7 @@ impl<C: JsClass + 'static> ClassProperty<C> {
     where
         S: AsRef<str>,
         A: FromArguments + 'static,
-        R: JsReturn + 'static,
+        R: for <'env> JsReturn<'env> + 'static,
         Method: Fn(&C, A) -> R + 'static
     {
         ClassProperty {
@@ -188,7 +188,7 @@ impl<C: JsClass + 'static> ClassProperty<C> {
     where
         S: AsRef<str>,
         A: FromArguments + 'static,
-        R: JsReturn + 'static,
+        R: for <'env> JsReturn<'env> + 'static,
         Accessor: Fn(&C, Option<A>) -> R + 'static
     {
         ClassProperty {
@@ -215,7 +215,7 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
     where
         S: AsRef<str>,
         A: FromArguments + 'static,
-        R: JsReturn + 'static,
+        R: for <'env> JsReturn<'env> + 'static,
         Method: Fn(&C, A) -> R + 'static
     {
         self.props.push(ClassProperty::method(name, method));
@@ -226,14 +226,14 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
     where
         S: AsRef<str>,
         A: FromArguments + 'static,
-        R: JsReturn + 'static,
+        R: for <'env> JsReturn<'env> + 'static,
         Accessor: Fn(&C, Option<A>) -> R + 'static
     {
         self.props.push(ClassProperty::accessor(name, accessor));
         self
     }
 
-    fn create_internal(&self, env: &Env, args_rust: Option<C::ArgsConstructorRust>) -> Result<JsFunction> {
+    fn create_internal<'e>(&self, env: &Env, args_rust: Option<C::ArgsConstructorRust>) -> Result<JsFunction<'e>> {
         let mut props: Vec<_> = self.props.iter().enumerate().map(|(index, prop)| { napi_property_descriptor {
             utf8name: prop.name.as_ptr() as *const i8,
             name: std::ptr::null_mut(),
@@ -294,11 +294,11 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
         Ok(JsFunction::from(result))
     }
 
-    pub fn create(&self, env: &Env) -> Result<JsFunction> {
+    pub fn create<'e>(&self, env: &Env) -> Result<JsFunction<'e>> {
         self.create_internal(env, None)
     }
 
-    pub fn new_instance(env: &Env, args: C::ArgsConstructorRust) -> Result<JsObject> {
+    pub fn new_instance<'e>(env: &Env, args: C::ArgsConstructorRust) -> Result<JsObject<'e>> {
         let builder = ClassBuilder::<C>::default();
         let fun = builder.create_internal(env, Some(args))?;
         fun.new_instance(())
@@ -313,7 +313,7 @@ pub struct ClassMethod<C, A, R>
 where
     C: JsClass,
     A: FromArguments,
-    R: JsReturn
+    R: for <'env> JsReturn<'env>
 {
     fun: Box<Fn(&C, A) -> R>,
 }
@@ -322,7 +322,7 @@ impl<C, A, R> ClassMethod<C, A, R>
 where
     C: JsClass,
     A: FromArguments,
-    R: JsReturn
+    R: for <'env> JsReturn<'env>
 {
     fn new<F>(fun: F) -> Self
     where
@@ -342,7 +342,7 @@ impl<C, A, R> ClassMethodHandler<C> for ClassMethod<C, A, R>
 where
     C: JsClass,
     A: FromArguments,
-    R: JsReturn
+    R: for <'env> JsReturn<'env>
 {
     fn handle(&self, this: &mut C, args: &Arguments) -> Result<Option<napi_value>> {
         let env = args.env();

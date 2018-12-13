@@ -1,14 +1,16 @@
 
+use std::marker::PhantomData;
 use std::os::raw::c_char;
 use napi_sys::*;
 use crate::prelude::*;
 use crate::Result;
 
-pub struct JsString {
-    pub(crate) value: Value
+pub struct JsString<'e> {
+    pub(crate) value: Value,
+    pub(crate) phantom: PhantomData<&'e ()>
 }
 
-impl JsString {
+impl<'e> JsString<'e> {
     /// Returns the string length
     pub fn len(&self) -> Result<usize> {
         unsafe {

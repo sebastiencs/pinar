@@ -1,13 +1,15 @@
 
+use std::marker::PhantomData;
 use napi_sys::*;
 use crate::prelude::*;
 use crate::Result;
 
-pub struct JsArray {
-    pub(crate) value: Value
+pub struct JsArray<'e> {
+    pub(crate) value: Value,
+    pub(crate) phantom: PhantomData<&'e ()>
 }
 
-impl JsArray {
+impl<'e> JsArray<'e> {
     pub fn iter(&self) -> Result<JsArrayIterator> {
         Ok(JsArrayIterator {
             index: 0,
@@ -30,7 +32,7 @@ impl JsArray {
 
     pub fn set<V>(&self, index: u32, value: V) -> Result<()>
     where
-        V: ToJs
+        V: ToJs<'e>
     {
         let value = value.to_js(&self.value.env)?.get_value();
         unsafe {
@@ -44,7 +46,7 @@ impl JsArray {
         Ok(())
     }
 
-    pub fn get(&self, index: u32) -> Result<JsUnknown>
+    pub fn get(&self, index: u32) -> Result<JsUnknown<'e>>
     {
         let mut value = Value::new(self.value.env);
         unsafe {
@@ -58,14 +60,14 @@ impl JsArray {
     }
 }
 
-pub struct JsArrayIterator<'e> {
+pub struct JsArrayIterator<'a, 'e> {
     index: usize,
     len: usize,
-    array: &'e JsArray
+    array: &'a JsArray<'e>
 }
 
-impl<'e> Iterator for JsArrayIterator<'e> {
-    type Item = JsUnknown;
+impl<'a, 'e> Iterator for JsArrayIterator<'a, 'e> {
+    type Item = JsUnknown<'e>;
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             let index = self.index;

@@ -1,14 +1,16 @@
 
+use std::marker::PhantomData;
 use crate::prelude::*;
 use crate::function_threadsafe::JsFunctionThreadSafe;
 use crate::*;
 
-pub struct JsFunction {
-    pub(crate) value: Value
+pub struct JsFunction<'e> {
+    pub(crate) value: Value,
+    pub(crate) phantom: PhantomData<&'e ()>
 }
 
-impl JsFunction {
-    pub fn call_with_this(&self, this: impl ToJs, args: impl MultiJs) -> Result<JsUnknown> {
+impl<'e> JsFunction<'e> {
+    pub fn call_with_this(&self, this: impl ToJs<'e>, args: impl MultiJs) -> Result<JsUnknown<'e>> {
         let args: Vec<_> = args.make_iter(&self.value.env)?
                                .into_iter()
                                .map(|v| v.value)
@@ -26,12 +28,12 @@ impl JsFunction {
         JsUnknown::from(result)
     }
 
-    pub fn call(&self, args: impl MultiJs) -> Result<JsUnknown> {
+    pub fn call(&self, args: impl MultiJs) -> Result<JsUnknown<'e>> {
         let global = self.value.env.global()?;
         self.call_with_this(global, args)
     }
 
-    pub fn new_instance(&self, args: impl MultiJs) -> Result<JsObject> {
+    pub fn new_instance(&self, args: impl MultiJs) -> Result<JsObject<'e>> {
         let args: Vec<_> = args.make_iter(&self.value.env)?
                                .into_iter()
                                .map(|v| v.value)

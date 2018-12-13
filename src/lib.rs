@@ -3,6 +3,13 @@
 //#![feature(specialization)]
 //#![feature(tool_lints)]
 #![feature(core_intrinsics)]
+#![warn(
+     clippy::all,
+     clippy::cargo,
+//     clippy::restriction,
+//     clippy::pedantic,
+//     clippy::nursery,
+)]
 
 use crate::module::__pinar_dispatch_function;
 use std::sync::Arc;
@@ -64,6 +71,8 @@ fn testfn(fun: JsFunction) {
     fun.call(vec![1, 2, 3]).ok();
     fun.call("salut").ok();
     fun.call(10).ok();
+    fun.call(Box::new(91)).ok();
+    fun.call((10, "a", 12, vec![1, 2, 3])).ok();
 }
 
 use serde_derive::Serialize;
@@ -142,6 +151,14 @@ fn test10(args: ()) -> Box<usize> {
     Box::new(1234)
 }
 
+fn test11<'e>(args: (JsString<'e>, JsObject)) -> JsString<'e> {
+    args.0
+}
+
+fn test12<'e>((env, s1, obj): (Env, JsString, JsObject)) -> JsString<'e> {
+    env.string("weeesh").unwrap()
+}
+
 #[macro_export]
 macro_rules! register_module {
     ($module_name:ident, $init:expr) => {
@@ -198,6 +215,8 @@ register_module!(sebastien, |module: ModuleBuilder| {
           .with_function("test8", test8)
           .with_function("test9", test9)
           .with_function("test10", test10)
+          .with_function("test11", test11)
+          .with_function("test12", test12)
           .with_class("someclass", || {
               ClassBuilder::<SomeClass>::start_build()
                   .with_method("easy", SomeClass::jsfunction)

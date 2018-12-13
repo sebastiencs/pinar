@@ -9,25 +9,25 @@ use crate::prelude::*;
 
 pub struct Arguments {
     env: Env,
-    args: Vec<JsUnknown>,
-    this: JsObject,
+    args: Vec<Value>,
+    this: Value,
     current_arg: Cell<usize>
 }
 
 impl Arguments {
-    pub(crate) fn new(env: Env, this: JsObject, args: &[napi_value]) -> Result<Arguments> {
+    pub(crate) fn new(env: Env, this: Value, args: &[napi_value]) -> Result<Arguments> {
         Ok(Arguments {
             env,
             this,
             args: args.iter()
-                      .map(|a| JsUnknown::from(Value::from(env, *a)))
-                      .collect::<Result<Vec<_>>>()?,
+                      .map(|a| Value::from(env, *a))
+                      .collect(),
             current_arg: Cell::new(0)
         })
     }
 
-    pub fn this(&self) -> JsObject {
-        self.this.clone()
+    pub fn this<'e>(&self) -> JsObject<'e> {
+        JsObject::from(self.this)
     }
 
     pub fn env(&self) -> &Env {
@@ -38,10 +38,10 @@ impl Arguments {
         self.current_arg.get()
     }
 
-    pub fn next_arg(&self) -> Option<JsUnknown> {
+    pub fn next_arg<'e>(&self) -> Option<JsUnknown<'e>> {
         let current = self.current_arg.get();
         self.current_arg.set(current + 1);
-        self.args.get(current).map(|v| v.clone())
+        self.args.get(current).and_then(|v| JsUnknown::from(*v).ok())
     }
 }
 
@@ -112,16 +112,17 @@ where
     fn from_args(args: &Arguments) -> Result<Self> {
         match args.next_arg() {
             Some(JsUnknown::Array(array)) => {
-                let args = Arguments {
-                    args: array.iter()?.map(|e| e).collect(),
-                    current_arg: Cell::new(0),
-                    env: *args.env(),
-                    this: args.this()
-                };
+                // let args = Arguments {
+                //     args: array.iter()?.map(|e| e).collect(),
+                //     current_arg: Cell::new(0),
+                //     env: *args.env(),
+                //     this: args.this()
+                // };
 
-                (0..array.len()?).into_iter()
-                                 .map(|_| A::from_args(&args))
-                                 .collect()
+                // (0..array.len()?).into_iter()
+                //                  .map(|_| A::from_args(&args))
+                //                  .collect()
+                Ok(vec![])
             }
             Some(_) => Err(ArgumentsError::wrong_type("array", args.arg_number())),
             _ => Err(ArgumentsError::missing(args.arg_number()))
@@ -131,7 +132,7 @@ where
 
 impl FromArguments for Env {
     fn from_args(args: &Arguments) -> Result<Self> {
-        Ok(args.env.clone())
+        Ok(args.env)
     }
 }
 
@@ -143,7 +144,7 @@ macro_rules! from_args_js {
         $( ( $rtype:ident, $rutype:ident, $rstr:expr $(,$gen:ident),* ) ),*
     ) => {
         $(
-            impl FromArguments for $jstype
+            impl<'e> FromArguments for $jstype<'e>
             {
                 fn from_args(args: &Arguments) -> Result<Self> {
                     match args.next_arg() {

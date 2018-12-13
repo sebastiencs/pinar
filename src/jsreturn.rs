@@ -4,15 +4,15 @@ use crate::Env;
 use crate::error::Error;
 use crate::ToJs;
 
-pub trait JsReturn {
+pub trait JsReturn<'e> {
     type Value: JsValue;
     type Error: Into<Error>;
     fn get_result(self, env: Env) -> Result<Option<Self::Value>, Self::Error>;
 }
 
-impl<T> JsReturn for T
+impl<'e, T> JsReturn<'e> for T
 where
-    T: ToJs
+    T: ToJs<'e>
 {
     type Value = T::Value;
     type Error = Error;
@@ -21,9 +21,9 @@ where
     }
 }
 
-impl<T> JsReturn for Option<T>
+impl<'e, T> JsReturn<'e> for Option<T>
 where
-    T: JsReturn
+    T: JsReturn<'e>
 {
     type Value = T::Value;
     type Error = Error;
@@ -35,9 +35,9 @@ where
     }
 }
 
-impl<T> JsReturn for crate::Result<T>
+impl<'e, T> JsReturn<'e> for crate::Result<T>
 where
-    T: JsReturn
+    T: JsReturn<'e>
 {
     type Value = T::Value;
     type Error = Error;
@@ -46,8 +46,8 @@ where
     }
 }
 
-impl JsReturn for () {
-    type Value = JsUndefined;
+impl<'e> JsReturn<'e> for () {
+    type Value = JsUndefined<'e>;
     type Error = Error;
     fn get_result(self, _: Env) -> Result<Option<Self::Value>, Self::Error> {
         Ok(None)

@@ -12,12 +12,12 @@ use std::rc::Rc;
 use crate::prelude::*;
 use crate::Result;
 
-pub struct ModuleBuilder
+pub struct ModuleBuilder<'e>
 {
     env: Env,
-    export: JsObject,
+    export: JsObject<'e>,
     functions: HashMap<String, ModuleFunction>,
-    classes: Vec<(String, JsFunction)>
+    classes: Vec<(String, JsFunction<'e>)>
 }
 
 pub(crate) struct ModuleFunction {
@@ -31,7 +31,7 @@ impl ModuleFunction {
         N: Into<String>,
         Fun: Fn(Args) -> R + 'static,
         Args: FromArguments + 'static,
-        R: JsReturn + 'static
+        R: for<'env> JsReturn<'env> + 'static
     {
         ModuleFunction {
             name: name.into(),
@@ -40,8 +40,8 @@ impl ModuleFunction {
     }
 }
 
-impl ModuleBuilder {
-    pub fn new(env: napi_env, export: napi_value) -> ModuleBuilder {
+impl<'e> ModuleBuilder<'e> {
+    pub fn new(env: napi_env, export: napi_value) -> ModuleBuilder<'e> {
         let env = Env::from(env);
         let export = Value::from(env, export);
         ModuleBuilder {
@@ -57,7 +57,7 @@ impl ModuleBuilder {
         S: Into<String>,
         Fun: Fn(Args) -> R + 'static,
         Args: FromArguments + 'static,
-        R: JsReturn + 'static
+        R: for<'env> JsReturn<'env> + 'static
     {
         let name = name.into();
         match self.functions.entry(name.clone()) {
@@ -126,7 +126,7 @@ pub fn __pinar_dispatch_function(env: napi_env, info: napi_callback_info) -> nap
 struct Callback<A, R>
 where
     A: FromArguments,
-    R: JsReturn
+    R: for<'env> JsReturn<'env>
 {
     fun: Box<Fn(A) -> R>
 }
@@ -134,7 +134,7 @@ where
 impl<A, R> Callback<A, R>
 where
     A: FromArguments,
-    R: JsReturn
+    R: for<'env> JsReturn<'env>
 {
     fn new<F>(fun: F) -> Self
     where
@@ -153,7 +153,7 @@ pub trait CallbackHandler {
 impl<A, R> CallbackHandler for Callback<A, R>
 where
     A: FromArguments,
-    R: JsReturn
+    R: for<'env> JsReturn<'env>
 {
     fn handle(&self, args: &Arguments) -> Result<Option<napi_value>> {
         let env = args.env();

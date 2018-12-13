@@ -1,4 +1,5 @@
 
+use std::marker::PhantomData;
 use napi_sys::*;
 use crate::Result;
 use crate::status::Status;
@@ -29,41 +30,45 @@ pub use self::{
     symbol::JsSymbol,
 };
 
-pub struct JsUndefined {
-    pub(crate) value: Value
+pub struct JsUndefined<'e> {
+    pub(crate) value: Value,
+    pub(crate) phantom: PhantomData<&'e ()>
 }
 
-pub struct JsNull {
-    pub(crate) value: Value
+pub struct JsNull<'e> {
+    pub(crate) value: Value,
+    pub(crate) phantom: PhantomData<&'e ()>
 }
 
-pub struct JsBoolean {
-    pub(crate) value: Value
+pub struct JsBoolean<'e> {
+    pub(crate) value: Value,
+    pub(crate) phantom: PhantomData<&'e ()>
 }
 
-pub struct JsBigInt {
-    pub(crate) value: Value
+pub struct JsBigInt<'e> {
+    pub(crate) value: Value,
+    pub(crate) phantom: PhantomData<&'e ()>
 }
 
 
 //#[derive(Copy, Clone)]
-pub enum JsUnknown {
-    String(JsString),
-    Object(JsObject),
-    Array(JsArray),
-    Number(JsNumber),
-    Symbol(JsSymbol),
-    External(JsExternal),
-    Function(JsFunction),
-    Undefined(JsUndefined),
-    Null(JsNull),
-    Boolean(JsBoolean),
-    BigInt(JsBigInt),
+pub enum JsUnknown<'e> {
+    String(JsString<'e>),
+    Object(JsObject<'e>),
+    Array(JsArray<'e>),
+    Number(JsNumber<'e>),
+    Symbol(JsSymbol<'e>),
+    External(JsExternal<'e>),
+    Function(JsFunction<'e>),
+    Undefined(JsUndefined<'e>),
+    Null(JsNull<'e>),
+    Boolean(JsBoolean<'e>),
+    BigInt(JsBigInt<'e>),
 }
 
-impl JsUnknown {
+impl<'e> JsUnknown<'e> {
     #[inline]
-    pub(crate) fn from(value: Value) -> Result<JsUnknown> {
+    pub(crate) fn from(value: Value) -> Result<JsUnknown<'e>> {
         let value = match value.type_of()? {
             ValueType::Object => {
                 match value.is_array()? {
@@ -84,7 +89,7 @@ impl JsUnknown {
         Ok(value)
     }
     #[inline]
-    pub(crate) fn clone(&self) -> JsUnknown {
+    pub(crate) fn clone(&self) -> JsUnknown<'e> {
         match self {
             JsUnknown::String(s) => JsUnknown::String(s.clone()),
             JsUnknown::Object(s) => JsUnknown::Object(s.clone()),
@@ -110,8 +115,8 @@ macro_rules! impl_jsref {
         $( $jstype:ident ),*
     ) => {
         $(
-            impl JsRef<$jstype> {
-                pub fn get(&self) -> Result<$jstype> {
+            impl<'e> JsRef<$jstype<'e>> {
+                pub fn get(&self) -> Result<$jstype<'e>> {
                     let mut result = Value::new(self.env);
                     unsafe {
                         Status::result(napi_get_reference_value(
@@ -124,22 +129,22 @@ macro_rules! impl_jsref {
                 }
             }
 
-            impl JsValue for $jstype {
+            impl<'e> JsValue for $jstype<'e> {
                 #[inline]
                 fn get_value(&self) -> Value {
                     self.value
                 }
             }
 
-            impl $jstype {
+            impl<'e> $jstype<'e> {
                 #[inline]
                 pub(crate) fn from(value: Value) -> Self {
-                    Self { value }
+                    Self { value, phantom: PhantomData }
                 }
 
                 #[inline]
                 pub(crate) fn clone(&self) -> Self {
-                    Self { value: self.value }
+                    Self { value: self.value, phantom: PhantomData }
                 }
             }
 

@@ -6,9 +6,9 @@ pub trait MultiJs {
     fn make_iter(self, env: &Env) -> Result<Self::Result>;
 }
 
-impl<A> MultiJs for A
+impl<'e, A> MultiJs for A
 where
-    A: ToJs,
+    A: ToJs<'e>,
 {
     type Result = Vec<Value>;
     fn make_iter(self, env: &Env) -> Result<Self::Result> {
@@ -23,9 +23,9 @@ macro_rules! multi_js_tuples {
         $( ( $($tuple:ident, $n:tt),* ) ),*
     ) => {
         $(
-            impl<$($tuple),*> MultiJs for ($($tuple,)*)
+            impl<'e, $($tuple),*> MultiJs for ($($tuple,)*)
             where
-                $($tuple : ToJs,)*
+                $($tuple : ToJs<'e>,)*
             {
                 type Result = Vec<Value>;
                 #[allow(unused_variables)]

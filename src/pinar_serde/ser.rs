@@ -1,4 +1,5 @@
 
+use std::marker::PhantomData;
 use std::cell::Cell;
 use std::fmt;
 use crate::prelude::*;
@@ -58,26 +59,28 @@ where
 {
     let serializer = PinarSerializer {
         env,
+        phantom: PhantomData
     };
     value.serialize(serializer)
 }
 
 #[doc(hidden)]
-pub struct PinarSerializer<'e>
+pub struct PinarSerializer<'a, 'e>
 {
-    env: &'e Env,
+    env: &'a Env,
+    phantom: PhantomData<&'e ()>
 }
 
 #[doc(hidden)]
-pub struct PinarArraySer<'e> {
-    env: &'e Env,
+pub struct PinarArraySer<'a, 'e> {
+    env: &'a Env,
     current_index: Cell<usize>,
-    array: JsArray,
+    array: JsArray<'e>,
     name_obj: Option<&'static str>
 }
 
-impl<'e> PinarArraySer<'e> {
-    fn new(env: &'e Env, length: usize, name: Option<&'static str>) -> Result<PinarArraySer<'e>> {
+impl<'a, 'e> PinarArraySer<'a, 'e> {
+    fn new(env: &'a Env, length: usize, name: Option<&'static str>) -> Result<PinarArraySer<'a, 'e>> {
         Ok(PinarArraySer {
             env,
             current_index: Cell::new(0),
@@ -87,15 +90,15 @@ impl<'e> PinarArraySer<'e> {
     }
 }
 
-pub struct PinarMapSer<'e> {
-    env: &'e Env,
-    obj: JsObject,
+pub struct PinarMapSer<'a, 'e> {
+    env: &'a Env,
+    obj: JsObject<'e>,
     key: Option<Value>,
     name_obj: Option<&'static str>
 }
 
-impl<'e> PinarMapSer<'e> {
-    fn new(env: &'e Env, name: Option<&'static str>) -> Result<PinarMapSer<'e>> {
+impl<'a, 'e> PinarMapSer<'a, 'e> {
+    fn new(env: &'a Env, name: Option<&'static str>) -> Result<PinarMapSer<'a, 'e>> {
         Ok(PinarMapSer {
             env,
             obj: env.object()?,
@@ -111,7 +114,7 @@ impl<'e> PinarMapSer<'e> {
 //     }
 // }
 
-impl<'e> ser::Serializer for PinarSerializer<'e> {
+impl<'a, 'e> ser::Serializer for PinarSerializer<'a, 'e> {
     // The output type produced by this `Serializer` during successful
     // serialization. Most serializers that produce text or binary output should
     // set `Ok = ()` and serialize into an `io::Write` or buffer contained
@@ -127,13 +130,13 @@ impl<'e> ser::Serializer for PinarSerializer<'e> {
     // compound data structures like sequences and maps. In this case no
     // additional state is required beyond what is already stored in the
     // Serializer struct.
-    type SerializeSeq = PinarArraySer<'e>;
-    type SerializeTuple = PinarArraySer<'e>;
-    type SerializeTupleStruct = PinarArraySer<'e>;
-    type SerializeTupleVariant = PinarArraySer<'e>;
-    type SerializeMap = PinarMapSer<'e>;
-    type SerializeStruct = PinarMapSer<'e>;
-    type SerializeStructVariant = PinarMapSer<'e>;
+    type SerializeSeq = PinarArraySer<'a, 'e>;
+    type SerializeTuple = PinarArraySer<'a, 'e>;
+    type SerializeTupleStruct = PinarArraySer<'a, 'e>;
+    type SerializeTupleVariant = PinarArraySer<'a, 'e>;
+    type SerializeMap = PinarMapSer<'a, 'e>;
+    type SerializeStruct = PinarMapSer<'a, 'e>;
+    type SerializeStructVariant = PinarMapSer<'a, 'e>;
 
     // Here we go with the simple methods. The following 12 methods receive one
     // of the primitive types of the data model and map it to JSON by appending
@@ -368,7 +371,7 @@ impl<'e> ser::Serializer for PinarSerializer<'e> {
 //
 // This impl is SerializeSeq so these methods are called after `serialize_seq`
 // is called on the Serializer.
-impl<'e> ser::SerializeSeq for PinarArraySer<'e> {
+impl<'a, 'e> ser::SerializeSeq for PinarArraySer<'a, 'e> {
     // Must match the `Ok` type of the serializer.
     type Ok = Value;
     // Must match the `Error` type of the serializer.
@@ -391,7 +394,7 @@ impl<'e> ser::SerializeSeq for PinarArraySer<'e> {
     }
 }
 // Same thing but for tuples.
-impl<'e> ser::SerializeTuple for PinarArraySer<'e> {
+impl<'a, 'e> ser::SerializeTuple for PinarArraySer<'a, 'e> {
     type Ok = Value;
     type Error = SerializeError;
 
@@ -408,7 +411,7 @@ impl<'e> ser::SerializeTuple for PinarArraySer<'e> {
 }
 
 // Same thing but for tuple structs.
-impl<'e> ser::SerializeTupleStruct for PinarArraySer<'e> {
+impl<'a, 'e> ser::SerializeTupleStruct for PinarArraySer<'a, 'e> {
     type Ok = Value;
     type Error = SerializeError;
 
@@ -433,7 +436,7 @@ impl<'e> ser::SerializeTupleStruct for PinarArraySer<'e> {
 //
 // So the `end` method in this impl is responsible for closing both the `]` and
 // the `}`.
-impl<'e> ser::SerializeTupleVariant for PinarArraySer<'e> {
+impl<'a, 'e> ser::SerializeTupleVariant for PinarArraySer<'a, 'e> {
     type Ok = Value;
     type Error = SerializeError;
 
@@ -460,7 +463,7 @@ impl<'e> ser::SerializeTupleVariant for PinarArraySer<'e> {
 // `serialize_entry` method allows serializers to optimize for the case where
 // key and value are both available simultaneously. In JSON it doesn't make a
 // difference so the default behavior for `serialize_entry` is fine.
-impl<'e> ser::SerializeMap for PinarMapSer<'e> {
+impl<'a, 'e> ser::SerializeMap for PinarMapSer<'a, 'e> {
     type Ok = Value;
     type Error = SerializeError;
 
@@ -507,7 +510,7 @@ impl<'e> ser::SerializeMap for PinarMapSer<'e> {
 
 // Structs are like maps in which the keys are constrained to be compile-time
 // constant strings.
-impl<'e> ser::SerializeStruct for PinarMapSer<'e> {
+impl<'a, 'e> ser::SerializeStruct for PinarMapSer<'a, 'e> {
     type Ok = Value;
     type Error = SerializeError;
 
@@ -525,7 +528,7 @@ impl<'e> ser::SerializeStruct for PinarMapSer<'e> {
 
 // Similar to `SerializeTupleVariant`, here the `end` method is responsible for
 // closing both of the curly braces opened by `serialize_struct_variant`.
-impl<'e> ser::SerializeStructVariant for PinarMapSer<'e> {
+impl<'a, 'e> ser::SerializeStructVariant for PinarMapSer<'a, 'e> {
     type Ok = Value;
     type Error = SerializeError;
 

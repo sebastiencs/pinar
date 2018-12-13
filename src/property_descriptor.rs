@@ -49,7 +49,7 @@ impl PropertyDescriptor {
         })
     }
 
-    pub fn value<S: AsRef<str>, V: ToJs>(env: &Env, name: S, value: V) -> Result<Self> {
+    pub fn value<'e, S: AsRef<str>, V: ToJs<'e>>(env: &Env, name: S, value: V) -> Result<Self> {
         Ok(PropertyDescriptor {
             name: env.string(name.as_ref())?.get_value().value,
             method: None,

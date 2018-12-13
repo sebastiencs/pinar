@@ -1,17 +1,19 @@
 
+use std::marker::PhantomData;
 use crate::*;
 use crate::prelude::*;
 use super::*;
 
-pub struct JsObject {
-    pub(crate) value: Value
+pub struct JsObject<'e> {
+    pub(crate) value: Value,
+    pub(crate) phantom: PhantomData<&'e ()>
 }
 
-impl JsObject {
+impl<'e> JsObject<'e> {
     pub fn set<K, V>(&self, key: K, value: V) -> Result<()>
     where
-        K: KeyProperty + ToJs,
-        V: ToJs
+        K: KeyProperty + ToJs<'e>,
+        V: ToJs<'e>
     {
         let key = key.to_js(&self.value.env)?.get_value();
         let value = value.to_js(&self.value.env)?.get_value();
@@ -21,9 +23,9 @@ impl JsObject {
         Ok(())
     }
 
-    pub fn get<K>(&self, key: K) -> Result<JsUnknown>
+    pub fn get<K>(&self, key: K) -> Result<JsUnknown<'e>>
     where
-        K: KeyProperty + ToJs
+        K: KeyProperty + ToJs<'e>
     {
         let key = key.to_js(&self.value.env)?.get_value();
         let mut value = Value::new(self.value.env);
@@ -33,7 +35,7 @@ impl JsObject {
         Ok(JsUnknown::from(value)?)
     }
 
-    pub fn get_property_names(&self) -> Result<JsArray> {
+    pub fn get_property_names(&self) -> Result<JsArray<'e>> {
         let mut value = Value::new(self.value.env);
         unsafe {
             Status::result(napi_get_property_names(self.value.env(), self.value.get(), value.get_mut()))?;
@@ -43,7 +45,7 @@ impl JsObject {
 
     pub fn has_property<K>(&self, key: K) -> Result<bool>
     where
-        K: KeyProperty + ToJs
+        K: KeyProperty + ToJs<'e>
     {
         let mut result = false;
         let key = key.to_js(&self.value.env)?.get_value();
@@ -55,7 +57,7 @@ impl JsObject {
 
     pub fn has_own_property<K>(&self, key: K) -> Result<bool>
     where
-        K: KeyProperty + ToJs
+        K: KeyProperty + ToJs<'e>
     {
         let mut result = false;
         let key = key.to_js(&self.value.env)?.get_value();
@@ -67,7 +69,7 @@ impl JsObject {
 
     pub fn delete_property<K>(&self, key: K) -> Result<bool>
     where
-        K: KeyProperty + ToJs
+        K: KeyProperty + ToJs<'e>
     {
         let mut result = false;
         let key = key.to_js(&self.value.env)?.get_value();
@@ -125,9 +127,9 @@ impl JsObject {
 ///   This can be a napi_value representing a String, Number, or Symbol.
 pub trait KeyProperty {}
 
-impl KeyProperty for JsString {}
-impl KeyProperty for JsNumber {}
-impl KeyProperty for JsSymbol {}
+impl<'e> KeyProperty for JsString<'e> {}
+impl<'e> KeyProperty for JsNumber<'e> {}
+impl<'e> KeyProperty for JsSymbol<'e> {}
 impl KeyProperty for Value {}
 impl KeyProperty for &'_ str {}
 impl KeyProperty for String {}

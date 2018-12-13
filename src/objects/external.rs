@@ -1,4 +1,5 @@
 
+use std::marker::PhantomData;
 use crate::error::JsExternalError;
 use std::sync::Arc;
 use std::rc::Rc;
@@ -7,18 +8,19 @@ use crate::prelude::*;
 use crate::external::External;
 use crate::Result;
 
-pub struct JsExternal {
-    pub(crate) value: Value
+pub struct JsExternal<'e> {
+    pub(crate) value: Value,
+    pub(crate) phantom: PhantomData<&'e ()>
 }
 
-impl JsExternal {
+impl<'e> JsExternal<'e> {
     fn get_external<T>(&self) -> Result<*mut External<T>> {
         let mut external: *mut External<T> = std::ptr::null_mut();
         unsafe {
             Status::result(napi_get_value_external(
                 self.value.env(),
                 self.get_value().value,
-                std::mem::transmute(&mut external)
+                &mut external as *mut *mut External<T> as *mut *mut std::ffi::c_void
             ))?;
         }
         if external.is_null() {
