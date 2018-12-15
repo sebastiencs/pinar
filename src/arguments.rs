@@ -5,6 +5,7 @@ use std::cell::Cell;
 
 use crate::error::ArgumentsError;
 use crate::Result;
+use crate::JsValue;
 use crate::prelude::*;
 
 pub struct Arguments {
@@ -112,17 +113,15 @@ where
     fn from_args(args: &Arguments) -> Result<Self> {
         match args.next_arg() {
             Some(JsUnknown::Array(array)) => {
-                // let args = Arguments {
-                //     args: array.iter()?.map(|e| e).collect(),
-                //     current_arg: Cell::new(0),
-                //     env: *args.env(),
-                //     this: args.this()
-                // };
+                let args = Arguments {
+                    args: array.values()?,
+                    current_arg: Cell::new(0),
+                    env: *args.env(),
+                    this: args.this().get_value()
+                };
 
-                // (0..array.len()?).into_iter()
-                //                  .map(|_| A::from_args(&args))
-                //                  .collect()
-                Ok(vec![])
+                (0..array.len()?).map(|_| A::from_args(&args))
+                                 .collect()
             }
             Some(_) => Err(ArgumentsError::wrong_type("array", args.arg_number())),
             _ => Err(ArgumentsError::missing(args.arg_number()))

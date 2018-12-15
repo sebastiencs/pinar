@@ -18,6 +18,10 @@ impl<'e> JsArray<'e> {
         })
     }
 
+    pub fn is_empty(&self) -> Result<bool> {
+        Ok(self.len()? == 0)
+    }
+
     pub fn len(&self) -> Result<usize> {
         let mut len: u32 = 0;
         unsafe {
@@ -46,8 +50,7 @@ impl<'e> JsArray<'e> {
         Ok(())
     }
 
-    pub fn get(&self, index: u32) -> Result<JsUnknown<'e>>
-    {
+    pub fn get(&self, index: u32) -> Result<JsUnknown<'e>> {
         let mut value = Value::new(self.value.env);
         unsafe {
             Status::result(napi_get_element(
@@ -57,6 +60,27 @@ impl<'e> JsArray<'e> {
             )?;
         }
         JsUnknown::from(value)
+    }
+
+    fn get_value(&self, index: u32) -> Result<Value> {
+        let mut value = Value::new(self.value.env);
+        unsafe {
+            Status::result(napi_get_element(
+                self.value.env(),
+                self.value.get(),
+                index, value.get_mut())
+            )?;
+        }
+        Ok(value)
+    }
+
+    pub(crate) fn values(&self) -> Result<Vec<Value>> {
+        let len = self.len()?;
+        let mut vec = Vec::with_capacity(len);
+        for i in 0..len {
+            vec.push(self.get_value(i as u32)?);
+        }
+        Ok(vec)
     }
 }
 
