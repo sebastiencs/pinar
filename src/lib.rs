@@ -57,6 +57,8 @@ pub mod prelude {
     pub use crate::classes::{JsClass, ClassBuilder};
     #[cfg(feature = "pinar-serde")]
     pub use crate::pinar_serde::ser::serialize_to_js;
+    #[cfg(feature = "pinar-serde")]
+    pub use pinar_derive::ToJs;
 }
 
 pub type Result<R> = std::result::Result<R, Error>;

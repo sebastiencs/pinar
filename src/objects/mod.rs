@@ -4,6 +4,7 @@ use napi_sys::*;
 use crate::Result;
 use crate::status::Status;
 use crate::value::ValueType;
+use crate::to_rust::ToRust;
 
 mod array;
 mod external;
@@ -102,6 +103,20 @@ impl<'e> JsUnknown<'e> {
             JsUnknown::Null(e) => JsUnknown::Null(e.clone()),
             JsUnknown::Boolean(e) => JsUnknown::Boolean(e.clone()),
             JsUnknown::BigInt(e) => JsUnknown::BigInt(e.clone()),
+        }
+    }
+
+    pub fn as_string(&self) -> Option<String> {
+        match self {
+            JsUnknown::String(s) => s.to_rust().ok(),
+            _ => None
+        }
+    }
+
+    pub fn as_bool(&self) -> Option<bool> {
+        match self {
+            JsUnknown::Boolean(s) => s.to_rust().ok(),
+            _ => None
         }
     }
 }
