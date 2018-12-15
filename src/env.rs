@@ -22,7 +22,6 @@ use crate::{
     JsUndefined,
     JsFunction,
     JsExternal,
-    JsUnknown,
     JsBoolean,
     JsNull,
 };

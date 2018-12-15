@@ -110,9 +110,9 @@ impl<'e> JsObject<'e> {
     }
 
     pub fn define_properties(&self, props: impl IntoIterator<Item = PropertyDescriptor>) -> Result<()> {
-        let props: Vec<_> = props.into_iter().map(|p: PropertyDescriptor| {
-            p.into()
-        }).collect();
+        let props = props.into_iter()
+                         .map(Into::into)
+                         .collect::<Vec<_>>();
 
         unsafe {
             Status::result(napi_define_properties(
@@ -139,13 +139,13 @@ impl<'e> JsObject<'e> {
         Ok(())
     }
 
-    pub fn napi_unwrap<T>(&self) -> Result<*mut T> {
+    pub(crate) fn napi_unwrap<T>(&self) -> Result<*mut T> {
         let mut obj: *mut T = std::ptr::null_mut();
         unsafe {
             Status::result(napi_unwrap(
                 self.value.env(),
                 self.get_value().value,
-                std::mem::transmute(&mut obj)
+                &mut obj as *mut *mut T as *mut *mut std::ffi::c_void
             ))?;
         }
         Ok(obj)
@@ -158,9 +158,9 @@ impl<'e> JsObject<'e> {
 ///   This can be a napi_value representing a String, Number, or Symbol.
 pub trait KeyProperty {}
 
-impl<'e> KeyProperty for JsString<'e> {}
-impl<'e> KeyProperty for JsNumber<'e> {}
-impl<'e> KeyProperty for JsSymbol<'e> {}
+impl KeyProperty for JsString<'_> {}
+impl KeyProperty for JsNumber<'_> {}
+impl KeyProperty for JsSymbol<'_> {}
 impl KeyProperty for Value {}
 impl KeyProperty for &'_ str {}
 impl KeyProperty for String {}

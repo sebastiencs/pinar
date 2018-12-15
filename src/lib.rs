@@ -12,10 +12,7 @@
 )]
 
 use crate::module::__pinar_dispatch_function;
-use std::sync::Arc;
-use std::rc::Rc;
 use std::collections::HashMap;
-use std::hash::Hash;
 use napi_sys::*;
 use crate::module::ModuleBuilder;
 use crate::objects::*;

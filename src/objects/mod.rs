@@ -18,8 +18,14 @@ mod value;
 
 pub use self::{
     value::Value,
-    jsref::{JsRef, AsJsRef},
-    array::JsArray,
+    jsref::{
+        JsRef,
+        AsJsRef
+    },
+    array::{
+        JsArray,
+        JsArrayIterator
+    },
     external::JsExternal,
     function::JsFunction,
     number::JsNumber,
