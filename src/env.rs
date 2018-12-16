@@ -24,6 +24,7 @@ use crate::{
     JsExternal,
     JsBoolean,
     JsNull,
+    JsAny,
 };
 use crate::{Result, Value, JsValue};
 use crate::status::Status;
@@ -334,4 +335,19 @@ impl Env {
         Err(Status::PendingException.into())
     }
 
+    pub fn run_script<S>(&self, script: S) -> Result<JsAny>
+    where
+        S: AsRef<str>
+    {
+        let script = self.string(script)?;
+        let mut result = Value::new(*self);
+        unsafe {
+            Status::result(napi_run_script(
+                self.env,
+                script.get_value().value,
+                result.get_mut()
+            ))?;
+        }
+        JsAny::from(result)
+    }
 }
