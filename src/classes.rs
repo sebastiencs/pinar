@@ -118,7 +118,7 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
             let property = this.get(Self::CLASS_DATA)?;
             let this = this.napi_unwrap::<Self>()?;
 
-            if let JsUnknown::External(e) = property {
+            if let JsAny::External(e) = property {
                 let external = e.get_rc::<JsClassData<Self>>()?;
 
                 if external.id != TypeId::of::<Self>() {

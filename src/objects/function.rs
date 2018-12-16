@@ -10,12 +10,12 @@ pub struct JsFunction<'e> {
 }
 
 impl<'e> JsFunction<'e> {
-    pub fn call(&self, args: impl MultiJs) -> Result<JsUnknown<'e>> {
+    pub fn call(&self, args: impl MultiJs) -> Result<JsAny<'e>> {
         let global = self.value.env.global()?;
         self.call_with_this(global, args)
     }
 
-    pub fn call_with_this(&self, this: impl ToJs<'e>, args: impl MultiJs) -> Result<JsUnknown<'e>> {
+    pub fn call_with_this(&self, this: impl ToJs<'e>, args: impl MultiJs) -> Result<JsAny<'e>> {
         let args: Vec<_> = args.make_iter(&self.value.env)?
                                .into_iter()
                                .map(|v| v.value)
@@ -32,7 +32,7 @@ impl<'e> JsFunction<'e> {
                 result.get_mut()
             ))?;
         };
-        JsUnknown::from(result)
+        JsAny::from(result)
     }
 
     pub fn new_instance(&self, args: impl MultiJs) -> Result<JsObject<'e>> {

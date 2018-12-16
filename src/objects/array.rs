@@ -50,7 +50,7 @@ impl<'e> JsArray<'e> {
         Ok(())
     }
 
-    pub fn get(&self, index: u32) -> Result<JsUnknown<'e>> {
+    pub fn get(&self, index: u32) -> Result<JsAny<'e>> {
         let mut value = Value::new(self.value.env);
         unsafe {
             Status::result(napi_get_element(
@@ -59,7 +59,7 @@ impl<'e> JsArray<'e> {
                 index, value.get_mut())
             )?;
         }
-        JsUnknown::from(value)
+        JsAny::from(value)
     }
 
     fn get_value(&self, index: u32) -> Result<Value> {
@@ -91,7 +91,7 @@ pub struct JsArrayIterator<'a, 'e> {
 }
 
 impl<'a, 'e> Iterator for JsArrayIterator<'a, 'e> {
-    type Item = JsUnknown<'e>;
+    type Item = JsAny<'e>;
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             let index = self.index;

@@ -57,9 +57,8 @@ pub struct JsBigInt<'e> {
     pub(crate) phantom: PhantomData<&'e ()>
 }
 
-
 //#[derive(Copy, Clone)]
-pub enum JsUnknown<'e> {
+pub enum JsAny<'e> {
     String(JsString<'e>),
     Object(JsObject<'e>),
     Array(JsArray<'e>),
@@ -73,55 +72,55 @@ pub enum JsUnknown<'e> {
     BigInt(JsBigInt<'e>),
 }
 
-impl<'e> JsUnknown<'e> {
+impl<'e> JsAny<'e> {
     #[inline]
-    pub(crate) fn from(value: Value) -> Result<JsUnknown<'e>> {
+    pub(crate) fn from(value: Value) -> Result<JsAny<'e>> {
         let value = match value.type_of()? {
             ValueType::Object => {
                 match value.is_array()? {
-                    true => JsUnknown::Array(JsArray::from(value)),
-                    _ => JsUnknown::Object(JsObject::from(value))
+                    true => JsAny::Array(JsArray::from(value)),
+                    _ => JsAny::Object(JsObject::from(value))
                 }
             },
-            ValueType::String => JsUnknown::String(JsString::from(value)),
-            ValueType::Number => JsUnknown::Number(JsNumber::from(value)),
-            ValueType::External => JsUnknown::External(JsExternal::from(value)),
-            ValueType::Symbol => JsUnknown::Symbol(JsSymbol::from(value)),
-            ValueType::Undefined => JsUnknown::Undefined(JsUndefined::from(value)),
-            ValueType::Function => JsUnknown::Function(JsFunction::from(value)),
-            ValueType::Null => JsUnknown::Null(JsNull::from(value)),
-            ValueType::Boolean => JsUnknown::Boolean(JsBoolean::from(value)),
-            ValueType::Bigint => JsUnknown::BigInt(JsBigInt::from(value)),
+            ValueType::String => JsAny::String(JsString::from(value)),
+            ValueType::Number => JsAny::Number(JsNumber::from(value)),
+            ValueType::External => JsAny::External(JsExternal::from(value)),
+            ValueType::Symbol => JsAny::Symbol(JsSymbol::from(value)),
+            ValueType::Undefined => JsAny::Undefined(JsUndefined::from(value)),
+            ValueType::Function => JsAny::Function(JsFunction::from(value)),
+            ValueType::Null => JsAny::Null(JsNull::from(value)),
+            ValueType::Boolean => JsAny::Boolean(JsBoolean::from(value)),
+            ValueType::Bigint => JsAny::BigInt(JsBigInt::from(value)),
         };
         Ok(value)
     }
     #[inline]
-    pub(crate) fn clone(&self) -> JsUnknown<'e> {
+    pub(crate) fn clone(&self) -> JsAny<'e> {
         match self {
-            JsUnknown::String(s) => JsUnknown::String(s.clone()),
-            JsUnknown::Object(s) => JsUnknown::Object(s.clone()),
-            JsUnknown::Array(s) => JsUnknown::Array(s.clone()),
-            JsUnknown::Number(s) => JsUnknown::Number(s.clone()),
-            JsUnknown::Symbol(s) => JsUnknown::Symbol(s.clone()),
-            JsUnknown::External(e) => JsUnknown::External(e.clone()),
-            JsUnknown::Function(e) => JsUnknown::Function(e.clone()),
-            JsUnknown::Undefined(e) => JsUnknown::Undefined(e.clone()),
-            JsUnknown::Null(e) => JsUnknown::Null(e.clone()),
-            JsUnknown::Boolean(e) => JsUnknown::Boolean(e.clone()),
-            JsUnknown::BigInt(e) => JsUnknown::BigInt(e.clone()),
+            JsAny::String(s) => JsAny::String(s.clone()),
+            JsAny::Object(s) => JsAny::Object(s.clone()),
+            JsAny::Array(s) => JsAny::Array(s.clone()),
+            JsAny::Number(s) => JsAny::Number(s.clone()),
+            JsAny::Symbol(s) => JsAny::Symbol(s.clone()),
+            JsAny::External(e) => JsAny::External(e.clone()),
+            JsAny::Function(e) => JsAny::Function(e.clone()),
+            JsAny::Undefined(e) => JsAny::Undefined(e.clone()),
+            JsAny::Null(e) => JsAny::Null(e.clone()),
+            JsAny::Boolean(e) => JsAny::Boolean(e.clone()),
+            JsAny::BigInt(e) => JsAny::BigInt(e.clone()),
         }
     }
 
     pub fn as_string(&self) -> Option<String> {
         match self {
-            JsUnknown::String(s) => s.to_rust().ok(),
+            JsAny::String(s) => s.to_rust().ok(),
             _ => None
         }
     }
 
     pub fn as_bool(&self) -> Option<bool> {
         match self {
-            JsUnknown::Boolean(s) => s.to_rust().ok(),
+            JsAny::Boolean(s) => s.to_rust().ok(),
             _ => None
         }
     }
@@ -131,20 +130,20 @@ pub trait JsValue {
     fn get_value(&self) -> Value;
 }
 
-impl<'e> JsValue for JsUnknown<'e> {
+impl<'e> JsValue for JsAny<'e> {
     fn get_value(&self) -> Value {
         match self {
-            JsUnknown::String(s) => s.value,
-            JsUnknown::Object(s) => s.value,
-            JsUnknown::Array(s) => s.value,
-            JsUnknown::Number(s) => s.value,
-            JsUnknown::Symbol(s) => s.value,
-            JsUnknown::External(s) => s.value,
-            JsUnknown::Function(s) => s.value,
-            JsUnknown::Undefined(s) => s.value,
-            JsUnknown::Null(s) => s.value,
-            JsUnknown::Boolean(s) => s.value,
-            JsUnknown::BigInt(s) => s.value,
+            JsAny::String(s) => s.value,
+            JsAny::Object(s) => s.value,
+            JsAny::Array(s) => s.value,
+            JsAny::Number(s) => s.value,
+            JsAny::Symbol(s) => s.value,
+            JsAny::External(s) => s.value,
+            JsAny::Function(s) => s.value,
+            JsAny::Undefined(s) => s.value,
+            JsAny::Null(s) => s.value,
+            JsAny::Boolean(s) => s.value,
+            JsAny::BigInt(s) => s.value,
         }
     }
 }

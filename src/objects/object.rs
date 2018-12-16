@@ -28,7 +28,7 @@ impl<'e> JsObject<'e> {
         Ok(())
     }
 
-    pub fn get<K>(&self, key: K) -> Result<JsUnknown<'e>>
+    pub fn get<K>(&self, key: K) -> Result<JsAny<'e>>
     where
         K: KeyProperty + ToJs<'e>
     {
@@ -42,7 +42,7 @@ impl<'e> JsObject<'e> {
                 value.get_mut()
             ))?;
         };
-        Ok(JsUnknown::from(value)?)
+        Ok(JsAny::from(value)?)
     }
 
     pub fn get_property_names(&self) -> Result<Vec<String>> {
@@ -58,7 +58,7 @@ impl<'e> JsObject<'e> {
         Ok(array.iter()?.filter_map(|v| v.as_string()).collect())
     }
 
-    pub(crate) fn get_property_names_any(&self) -> Result<Vec<JsUnknown<'e>>> {
+    pub(crate) fn get_property_names_any(&self) -> Result<Vec<JsAny<'e>>> {
         let mut value = Value::new(self.value.env);
         unsafe {
             Status::result(napi_get_property_names(

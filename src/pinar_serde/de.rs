@@ -50,7 +50,7 @@ impl std::error::Error for DeserializeError {
     }
 }
 
-pub fn from_any<T>(env: Env, any: JsUnknown) -> Result<T>
+pub fn from_any<T>(env: Env, any: JsAny) -> Result<T>
 where
     T: DeserializeOwned + ?Sized,
 {
@@ -61,12 +61,12 @@ where
 #[doc(hidden)]
 pub struct Deserializer<'e> {
     env: Env,
-    input: JsUnknown<'e>
+    input: JsAny<'e>
 }
 
 #[doc(hidden)]
 impl<'e> Deserializer<'e> {
-    fn new(env: Env, input: JsUnknown<'e>) -> Self {
+    fn new(env: Env, input: JsAny<'e>) -> Self {
         Deserializer { env, input }
     }
 }
@@ -80,25 +80,25 @@ impl<'e, 'de> serde::de::Deserializer<'de> for Deserializer<'e> {
         V: Visitor<'de>,
     {
         match self.input {
-            JsUnknown::String(s) => visitor.visit_string(s.to_rust().unwrap()),
-            JsUnknown::Undefined(_) => visitor.visit_unit(),
-            JsUnknown::Null(_) => visitor.visit_unit(),
-            JsUnknown::Boolean(b) => visitor.visit_bool(b.to_rust().unwrap()),
-            JsUnknown::Object(o) => {
+            JsAny::String(s) => visitor.visit_string(s.to_rust().unwrap()),
+            JsAny::Undefined(_) => visitor.visit_unit(),
+            JsAny::Null(_) => visitor.visit_unit(),
+            JsAny::Boolean(b) => visitor.visit_bool(b.to_rust().unwrap()),
+            JsAny::Object(o) => {
                 let mut deserializer = JsObjectAccess::new(self.env, o)?;
                 visitor.visit_map(&mut deserializer)
             },
-            JsUnknown::Array(a) => {
+            JsAny::Array(a) => {
                 let mut deserializer = JsArrayAccess::new(self.env, a);
                 visitor.visit_seq(&mut deserializer)
             },
-            JsUnknown::Number(n) => {
+            JsAny::Number(n) => {
                 visitor.visit_i64(n.to_rust().unwrap())
             },
-            JsUnknown::Symbol(_) => panic!("error"),
-            JsUnknown::External(_) => panic!("error"),
-            JsUnknown::Function(_) => panic!("error"),
-            JsUnknown::BigInt(_) => panic!("error"),
+            JsAny::Symbol(_) => panic!("error"),
+            JsAny::External(_) => panic!("error"),
+            JsAny::Function(_) => panic!("error"),
+            JsAny::BigInt(_) => panic!("error"),
         }
     }
 
@@ -107,7 +107,7 @@ impl<'e, 'de> serde::de::Deserializer<'de> for Deserializer<'e> {
         V: Visitor<'de>,
     {
         match self.input {
-            JsUnknown::Undefined(_) | JsUnknown::Null(_) => visitor.visit_none(),
+            JsAny::Undefined(_) | JsAny::Null(_) => visitor.visit_none(),
             _ => visitor.visit_some(self)
         }
     }
@@ -122,10 +122,10 @@ impl<'e, 'de> serde::de::Deserializer<'de> for Deserializer<'e> {
         V: Visitor<'de>,
     {
         match self.input {
-            JsUnknown::String(s) => {
+            JsAny::String(s) => {
                 visitor.visit_enum(JsEnumAccess::new(self.env, s.to_rust().unwrap(), None))
             },
-            JsUnknown::Object(o) => {
+            JsAny::Object(o) => {
                 let props = o.get_property_names().unwrap();
                 if props.len() != 1 {
                     panic!("error");
@@ -240,7 +240,7 @@ impl<'e, 'de> SeqAccess<'de> for JsArrayAccess<'e> {
 struct JsObjectAccess<'e> {
     env: Env,
     object: JsObject<'e>,
-    props: VecDeque<JsUnknown<'e>>,
+    props: VecDeque<JsAny<'e>>,
     // index: u32,
     // length: u32,
 }
@@ -335,12 +335,12 @@ impl<'e, 'de> MapAccess<'de> for JsObjectAccess<'e> {
 struct JsEnumAccess<'e> {
     env: Env,
     variant: String,
-    value: Option<JsUnknown<'e>>,
+    value: Option<JsAny<'e>>,
 }
 
 #[doc(hidden)]
 impl<'e> JsEnumAccess<'e> {
-    fn new(env: Env, key: String, value: Option<JsUnknown<'e>>) -> Self {
+    fn new(env: Env, key: String, value: Option<JsAny<'e>>) -> Self {
         JsEnumAccess {
             env,
             variant: key,
@@ -368,12 +368,12 @@ impl<'e, 'de> EnumAccess<'de> for JsEnumAccess<'e> {
 #[doc(hidden)]
 struct JsVariantAccess<'e> {
     env: Env,
-    value: Option<JsUnknown<'e>>,
+    value: Option<JsAny<'e>>,
 }
 
 #[doc(hidden)]
 impl<'e> JsVariantAccess<'e> {
-    fn new(env: Env, value: Option<JsUnknown<'e>>) -> Self {
+    fn new(env: Env, value: Option<JsAny<'e>>) -> Self {
         JsVariantAccess { env, value }
     }
 }
@@ -415,7 +415,7 @@ impl<'e, 'de> VariantAccess<'de> for JsVariantAccess<'e> {
         match self.value {
             Some(handle) => {
                 match handle {
-                    JsUnknown::Array(a) => {
+                    JsAny::Array(a) => {
                         let mut deserializer = JsArrayAccess::new(self.env, a);
                         visitor.visit_seq(&mut deserializer)
                     },
@@ -450,7 +450,7 @@ impl<'e, 'de> VariantAccess<'de> for JsVariantAccess<'e> {
         match self.value {
             Some(handle) => {
                 match handle {
-                    JsUnknown::Object(o) => {
+                    JsAny::Object(o) => {
                         let mut deserializer = JsObjectAccess::new(self.env, o)?;
                         visitor.visit_map(&mut deserializer)
                     },

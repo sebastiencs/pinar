@@ -39,10 +39,10 @@ impl Arguments {
         self.current_arg.get()
     }
 
-    pub fn next_arg<'e>(&self) -> Option<JsUnknown<'e>> {
+    pub fn next_arg<'e>(&self) -> Option<JsAny<'e>> {
         let current = self.current_arg.get();
         self.current_arg.set(current + 1);
-        self.args.get(current).and_then(|v| JsUnknown::from(*v).ok())
+        self.args.get(current).and_then(|v| JsAny::from(*v).ok())
     }
 }
 
@@ -112,7 +112,7 @@ where
 {
     fn from_args(args: &Arguments) -> Result<Self> {
         match args.next_arg() {
-            Some(JsUnknown::Array(array)) => {
+            Some(JsAny::Array(array)) => {
                 let args = Arguments {
                     args: array.values()?,
                     current_arg: Cell::new(0),
@@ -147,7 +147,7 @@ macro_rules! from_args_js {
             {
                 fn from_args(args: &Arguments) -> Result<Self> {
                     match args.next_arg() {
-                        Some(JsUnknown::$utype(value)) => Ok(value),
+                        Some(JsAny::$utype(value)) => Ok(value),
                         Some(_) => Err(ArgumentsError::wrong_type($str, args.arg_number())),
                         _ => Err(ArgumentsError::missing(args.arg_number()))
                     }
@@ -159,7 +159,7 @@ macro_rules! from_args_js {
             {
                 fn from_args(args: &Arguments) -> Result<Self> {
                     match args.next_arg() {
-                        Some(JsUnknown::$rutype(value)) => value.to_rust(),
+                        Some(JsAny::$rutype(value)) => value.to_rust(),
                         Some(_) => Err(ArgumentsError::wrong_type($rstr, args.arg_number())),
                         _ => Err(ArgumentsError::missing(args.arg_number()))
                     }
