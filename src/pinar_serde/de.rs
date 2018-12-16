@@ -14,6 +14,13 @@ pub struct DeserializeError {
     msg: String
 }
 
+impl DeserializeError {
+    fn new<M: AsRef<str>>(msg: M) -> DeserializeError {
+        let msg = msg.as_ref();
+        DeserializeError { msg: msg.to_string() }
+    }
+}
+
 impl From<crate::Error> for DeserializeError {
     fn from(o: crate::Error) -> DeserializeError {
         DeserializeError {
@@ -95,10 +102,10 @@ impl<'e, 'de> serde::de::Deserializer<'de> for Deserializer<'e> {
             JsAny::Number(n) => {
                 visitor.visit_i64(n.to_rust().unwrap())
             },
-            JsAny::Symbol(_) => panic!("error"),
-            JsAny::External(_) => panic!("error"),
-            JsAny::Function(_) => panic!("error"),
-            JsAny::BigInt(_) => panic!("error"),
+            JsAny::Symbol(_) => unimplemented!(),
+            JsAny::External(_) => unimplemented!(),
+            JsAny::Function(_) => unimplemented!(),
+            JsAny::BigInt(_) => unimplemented!(),
         }
     }
 
@@ -126,56 +133,38 @@ impl<'e, 'de> serde::de::Deserializer<'de> for Deserializer<'e> {
                 visitor.visit_enum(JsEnumAccess::new(self.env, s.to_rust().unwrap(), None))
             },
             JsAny::Object(o) => {
-                let props = o.get_property_names().unwrap();
+                let props = o.get_property_names()
+                             .map_err(|e| DeserializeError::new(format!("{:?}", e)))?;
+
                 if props.len() != 1 {
-                    panic!("error");
+                    return Err(DeserializeError::new(
+                        format!("object with {} properties, expected 1", props.len())
+                    ));
                 }
                 let key = &props[0];
-                let value = o.get(key.as_str()).unwrap();
+                let value = o.get(key.as_str())
+                             .map_err(|e| DeserializeError::new(format!("{:?}", e)))?;
+
                 visitor.visit_enum(JsEnumAccess::new(self.env, key.to_string(), Some(value)))
             },
             _ => {
-                panic!("error")
+                unimplemented!()
             }
         }
-        // if let Ok(val) = self.input.downcast::<JsString>() {
-        //     visitor.visit_enum(JsEnumAccess::new(self.cx, val.value(), None))
-        // } else if let Ok(val) = self.input.downcast::<JsObject>() {
-        //     let prop_names = val.get_own_property_names(self.cx)?;
-        //     let len = prop_names.len();
-        //     if len != 1 {
-        //         Err(ErrorKind::InvalidKeyType(format!(
-        //             "object key with {} properties",
-        //             len
-        //         )))?
-        //     }
-        //     let key = prop_names.get(self.cx, 0)?.downcast::<JsString>().or_throw(self.cx)?;
-        //     let enum_value = val.get(self.cx, key)?;
-        //     visitor.visit_enum(JsEnumAccess::new(self.cx, key.value(), Some(enum_value)))
-        // } else {
-        //     let m = self.input.to_string(self.cx)?.value();
-        //     Err(ErrorKind::InvalidKeyType(m))?
-        // }
     }
 
     fn deserialize_bytes<V>(self, _visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        panic!("error");
-        // let buff = self.input.downcast::<JsBuffer>().or_throw(self.cx)?;
-        // let copy = self.cx.borrow(&buff, |buff| Vec::from(buff.as_slice()));
-        // visitor.visit_bytes(&copy)
+        unimplemented!()
     }
 
     fn deserialize_byte_buf<V>(self, _visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        panic!("error");
-        // let buff = self.input.downcast::<JsBuffer>().or_throw(self.cx)?;
-        // let copy = self.cx.borrow(&buff, |buff| Vec::from(buff.as_slice()));
-        // visitor.visit_byte_buf(copy)
+        unimplemented!()
     }
 
     fn deserialize_ignored_any<V>(self, visitor: V) -> Result<V::Value>
@@ -241,8 +230,6 @@ struct JsObjectAccess<'e> {
     env: Env,
     object: JsObject<'e>,
     props: VecDeque<JsAny<'e>>,
-    // index: u32,
-    // length: u32,
 }
 
 #[doc(hidden)]
@@ -266,14 +253,6 @@ impl<'e, 'de> MapAccess<'de> for JsObjectAccess<'e> {
     where
         K: DeserializeSeed<'de>,
     {
-        // if self.indx >= self.len {
-        //     return Ok(None);
-        // }
-
-        // let prop_name = self.prop_names.get(self.cx, self.idx)?;
-
-        // let mut de = Deserializer::new(self.cx, prop_name);
-        // seed.deserialize(&mut de).map(Some)
         if self.props.is_empty() {
             return Ok(None)
         }
@@ -281,8 +260,6 @@ impl<'e, 'de> MapAccess<'de> for JsObjectAccess<'e> {
         let prop = self.props.front().map(|v| v.clone()).unwrap();
         let de = Deserializer::new(self.env, prop);
         seed.deserialize(de).map(Some)
-
-        // Ok(self.props.front().map(Clone::clone))
     }
 
     fn next_value_seed<V>(&mut self, seed: V) -> Result<V::Value>
@@ -290,18 +267,11 @@ impl<'e, 'de> MapAccess<'de> for JsObjectAccess<'e> {
         V: DeserializeSeed<'de>,
     {
         if self.props.is_empty() {
-            panic!("error");
+            panic!("Fetching value with empty props");
         }
         let key = self.props.pop_front().unwrap();
         let value = self.object.get(key.get_value()).unwrap();
 
-        // if self.idx >= self.len {
-        //     return Err(ErrorKind::ArrayIndexOutOfBounds(self.len, self.idx))?;
-        // }
-        // let prop_name = self.prop_names.get(self.cx, self.idx)?;
-        // let value = self.input.get(self.cx, prop_name)?;
-
-        // self.idx += 1;
         let de = Deserializer::new(self.env, value);
         seed.deserialize(de)
     }
@@ -318,10 +288,10 @@ impl<'e, 'de> MapAccess<'de> for JsObjectAccess<'e> {
         let value = self.object.get(key.get_value()).unwrap();
 
         let de = Deserializer::new(self.env, key);
-        let key = kseed.deserialize(de).unwrap();
+        let key = kseed.deserialize(de)?;
 
         let de = Deserializer::new(self.env, value);
-        let value = vseed.deserialize(de).unwrap();
+        let value = vseed.deserialize(de)?;
 
         Ok(Some((key, value)))
     }
@@ -413,30 +383,11 @@ impl<'e, 'de> VariantAccess<'de> for JsVariantAccess<'e> {
         V: Visitor<'de>,
     {
         match self.value {
-            Some(handle) => {
-                match handle {
-                    JsAny::Array(a) => {
-                        let mut deserializer = JsArrayAccess::new(self.env, a);
-                        visitor.visit_seq(&mut deserializer)
-                    },
-                    _ => {
-                        Err(serde::de::Error::invalid_type(
-                            Unexpected::Other("JsValue"),
-                            &"tuple variant",
-                        ))
-                    }
-                }
-                // if let Ok(val) = handle.downcast::<JsArray>() {
-                //     let mut deserializer = JsArrayAccess::new(self.cx, val);
-                //     visitor.visit_seq(&mut deserializer)
-                // } else {
-                //     Err(serde::de::Error::invalid_type(
-                //         Unexpected::Other("JsValue"),
-                //         &"tuple variant",
-                //     ))
-                // }
+            Some(JsAny::Array(a)) => {
+                let mut deserializer = JsArrayAccess::new(self.env, a);
+                visitor.visit_seq(&mut deserializer)
             },
-            None => Err(serde::de::Error::invalid_type(
+            _ => Err(serde::de::Error::invalid_type(
                 Unexpected::UnitVariant,
                 &"tuple variant",
             )),
@@ -448,19 +399,9 @@ impl<'e, 'de> VariantAccess<'de> for JsVariantAccess<'e> {
         V: Visitor<'de>,
     {
         match self.value {
-            Some(handle) => {
-                match handle {
-                    JsAny::Object(o) => {
-                        let mut deserializer = JsObjectAccess::new(self.env, o)?;
-                        visitor.visit_map(&mut deserializer)
-                    },
-                    _ => {
-                        Err(serde::de::Error::invalid_type(
-                            Unexpected::Other("JsValue"),
-                            &"struct variant",
-                        ))
-                    }
-                }
+            Some(JsAny::Object(o)) => {
+                let mut deserializer = JsObjectAccess::new(self.env, o)?;
+                visitor.visit_map(&mut deserializer)
             },
             _ => Err(serde::de::Error::invalid_type(
                 Unexpected::UnitVariant,
