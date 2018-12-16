@@ -160,7 +160,7 @@ where
         let args = A::from_args(args)?;
 
         Ok((self.fun)(args)
-           .get_result(*env)
+           .get_result(env)
            .map_err(|e| e.into())?
            .map(|res| res.get_value().value))
     }

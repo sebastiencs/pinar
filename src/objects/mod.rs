@@ -131,6 +131,24 @@ pub trait JsValue {
     fn get_value(&self) -> Value;
 }
 
+impl<'e> JsValue for JsUnknown<'e> {
+    fn get_value(&self) -> Value {
+        match self {
+            JsUnknown::String(s) => s.value,
+            JsUnknown::Object(s) => s.value,
+            JsUnknown::Array(s) => s.value,
+            JsUnknown::Number(s) => s.value,
+            JsUnknown::Symbol(s) => s.value,
+            JsUnknown::External(s) => s.value,
+            JsUnknown::Function(s) => s.value,
+            JsUnknown::Undefined(s) => s.value,
+            JsUnknown::Null(s) => s.value,
+            JsUnknown::Boolean(s) => s.value,
+            JsUnknown::BigInt(s) => s.value,
+        }
+    }
+}
+
 macro_rules! impl_jsref {
     (
         $( $jstype:ident ),*

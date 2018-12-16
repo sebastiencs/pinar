@@ -31,8 +31,8 @@ impl Arguments {
         JsObject::from(self.this)
     }
 
-    pub fn env(&self) -> &Env {
-        &self.env
+    pub fn env(&self) -> Env {
+        self.env
     }
 
     pub fn arg_number(&self) -> usize {
@@ -116,7 +116,7 @@ where
                 let args = Arguments {
                     args: array.values()?,
                     current_arg: Cell::new(0),
-                    env: *args.env(),
+                    env: args.env(),
                     this: args.this().get_value()
                 };
 

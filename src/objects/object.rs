@@ -58,6 +58,20 @@ impl<'e> JsObject<'e> {
         Ok(array.iter()?.filter_map(|v| v.as_string()).collect())
     }
 
+    pub(crate) fn get_property_names_any(&self) -> Result<Vec<JsUnknown<'e>>> {
+        let mut value = Value::new(self.value.env);
+        unsafe {
+            Status::result(napi_get_property_names(
+                self.value.env(),
+                self.value.get(),
+                value.get_mut()
+            ))?;
+        };
+        let array = JsArray::from(value);
+        let res: Vec<_> = array.iter()?.map(|v| v.clone()).collect();
+        Ok(unsafe { std::mem::transmute(res) })
+    }
+
     pub fn has_property<K>(&self, key: K) -> Result<bool>
     where
         K: KeyProperty + ToJs<'e>

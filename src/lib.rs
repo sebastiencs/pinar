@@ -11,6 +11,8 @@
 //     clippy::nursery,
 )]
 
+use crate::arguments::{Arguments, FromArguments};
+use crate::error::ArgumentsError;
 use crate::module::__pinar_dispatch_function;
 use std::collections::HashMap;
 use napi_sys::*;
@@ -72,13 +74,14 @@ fn testfn(fun: JsFunction) {
     fun.call(10).ok();
     fun.call(Box::new(91)).ok();
     fun.call((10, "a", 12, vec![1, 2, 3])).ok();
+    fun.call(ABC { a: 1, b: 2, c: 3, d: TestEnum::B(1), e: None }).ok();
 }
 
-use serde_derive::Serialize;
+use serde_derive::{Serialize, Deserialize};
 
-use pinar_derive::ToJs;
+use pinar_derive::{ToJs, FromArguments};
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 enum TestEnum {
     A(String),
     B(usize),
@@ -87,12 +90,18 @@ enum TestEnum {
     E(Box<usize>)
 }
 
-#[derive(Serialize, ToJs)]
+#[derive(Debug, Serialize, Deserialize)]
+struct AR {
+    s: String
+}
+
+#[derive(Debug, Serialize, Deserialize, ToJs, FromArguments)]
 struct ABC {
     a: i32,
     b: i32,
     c: i32,
-    d: TestEnum
+    d: TestEnum,
+    e: Option<AR>
 }
 
 fn test1(args: (Env, String)) {
@@ -142,7 +151,8 @@ fn test9(args: ()) -> ABC {
         a: 10,
         b: 31,
         c: 22,
-        d: TestEnum::E(Box::new(123))
+        d: TestEnum::E(Box::new(123)),
+        e: None
     }
 }
 
@@ -156,6 +166,12 @@ fn test11<'e>(args: (JsString<'e>, JsObject)) -> JsString<'e> {
 
 fn test12<'e>((env, s1, obj): (Env, JsString, JsObject)) -> JsString<'e> {
     env.string("weeesh").unwrap()
+}
+
+fn test13<'e>((env, abc): (Env, ABC)) -> ABC {
+    println!("ABC: {:?}", abc);
+    abc
+    //env.string("weeesh").unwrap()
 }
 
 #[macro_export]
@@ -216,6 +232,7 @@ register_module!(sebastien, |module: ModuleBuilder| {
           .with_function("test10", test10)
           .with_function("test11", test11)
           .with_function("test12", test12)
+          .with_function("test13", test13)
           .with_class("someclass", || {
               ClassBuilder::<SomeClass>::start_build()
                   .with_method("easy", SomeClass::jsfunction)

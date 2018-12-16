@@ -59,7 +59,9 @@ pub enum ArgumentsError {
     #[fail(display = "{}th argument is missing", _0)]
     Missing(usize),
     #[fail(display = "Wrong type, expected a {} on the {}th argument", _0, _1)]
-    WrongType(String, usize)
+    WrongType(String, usize),
+    #[fail(display = "Deserialization error: {}", _0)]
+    Deserialization(String)
 }
 
 impl ArgumentsError {

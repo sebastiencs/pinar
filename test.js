@@ -48,6 +48,20 @@
   console.log("BOX:", a.test10());
   console.log("11:", a.test11("salut", {}));
   console.log("12:", a.test12("salut", {}));
+  console.log("13:", a.test13({ a: 1, b: 2, c: 3, d: { A: "wesh" }}));
+  console.log("13:", a.test13({ a: 1, b: 2, c: 3, d: { B: 91 }}));
+  console.log("13:", a.test13({ a: 1, b: 2, c: 3, d: { C: [5, 6, 7] }}));
+  console.log("13:", a.test13({ a: 1, b: 2, c: 3, d: { D: 2 }}));
+  console.log("13:", a.test13({ a: 1, b: 2, c: 3, d: { E: 10 }}));
+  try {
+    console.log("13:", a.test13({ a: "seb", b: 2, c: 3, d: { E: 10 }}));
+  } catch (e) { console.log(e); }
+  try {
+    console.log("13:", a.test13({ a: 1, b: 2, c: 3 }));
+  } catch (e) { console.log(e); }
+  try {
+    console.log("13:", a.test13({ a: 1, b: 2, c: 3, d: { E: 10 }, e: { s: "seb" } }));
+  } catch (e) { console.log(e); }
   //let myclass3 = a.someclass("salut toi", 25);
   //console.log("EASY:", myclass3);
 }
