@@ -31,16 +31,19 @@ impl<'e> JsExternal<'e> {
 
     pub fn take_box<T: 'static>(&self) -> Result<Option<Box<T>>> {
         let external = self.get_external::<T>()?;
+        // Deref raw pointer is unsafe
         Ok(unsafe { (*external).take_box::<T>() })
     }
 
     pub fn get_rc<T: 'static>(&self) -> Result<Rc<T>> {
         let external = self.get_external::<T>()?;
+        // Deref raw pointer is unsafe
         Ok(unsafe { (*external).get_rc::<T>() })
     }
 
     pub fn get_arc<T: 'static>(&self) -> Result<Arc<T>> {
         let external = self.get_external::<T>()?;
+        // Deref raw pointer is unsafe
         Ok(unsafe { (*external).get_arc::<T>() })
     }
 }

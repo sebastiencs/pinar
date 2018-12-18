@@ -24,7 +24,8 @@ impl<T: JsValue> AsJsRef<T> for T {
                 env.env(),
                 self.get_value().value,
                 1,
-                &mut js_ref as *mut napi_ref))?;
+                &mut js_ref as *mut napi_ref
+            ))?;
         }
         Ok(JsRef {
             env,

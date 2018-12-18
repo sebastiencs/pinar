@@ -160,8 +160,8 @@ macro_rules! impl_jsref {
                         Status::result(napi_get_reference_value(
                             self.env.env(),
                             self.js_ref,
-                            result.get_mut())
-                        )?;
+                            result.get_mut()
+                        ))?;
                     }
                     Ok($jstype::from(result))
                 }

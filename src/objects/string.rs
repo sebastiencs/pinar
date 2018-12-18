@@ -20,8 +20,8 @@ impl<'e> JsString<'e> {
                 self.value.get(),
                 std::ptr::null_mut() as *mut c_char,
                 0,
-                &mut length as *mut usize)
-            )?;
+                &mut length as *mut usize
+            ))?;
             Ok(length)
         }
     }

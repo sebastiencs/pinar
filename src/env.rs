@@ -49,8 +49,8 @@ impl Env {
             Status::result(napi_get_boolean(
                 self.env,
                 b,
-                value.get_mut())
-            )?
+                value.get_mut()
+            ))?
         };
         Ok(JsBoolean::from(value))
     }
@@ -61,8 +61,8 @@ impl Env {
             Status::result(napi_create_double(
                 self.env,
                 d,
-                value.get_mut())
-            )?
+                value.get_mut()
+            ))?
         };
         Ok(JsNumber::from(value))
     }
@@ -72,8 +72,8 @@ impl Env {
         unsafe {
             Status::result(napi_create_object(
                 self.env,
-                value.get_mut())
-            )?
+                value.get_mut()
+            ))?
         };
         Ok(JsObject::from(value))
     }
@@ -84,8 +84,8 @@ impl Env {
             Status::result(napi_create_int64(
                 self.env,
                 n,
-                value.get_mut())
-            )?
+                value.get_mut()
+            ))?
         };
         Ok(JsNumber::from(value))
     }
@@ -98,8 +98,8 @@ impl Env {
                 self.env,
                 s.as_ptr() as *const c_char,
                 s.len(),
-                value.get_mut())
-            )?
+                value.get_mut()
+            ))?
         };
         Ok(JsString::from(value))
     }
@@ -109,8 +109,8 @@ impl Env {
         unsafe {
             Status::result(napi_create_array(
                 self.env,
-                value.get_mut())
-            )?
+                value.get_mut()
+            ))?
         };
         Ok(JsArray::from(value))
     }
@@ -121,8 +121,8 @@ impl Env {
             Status::result(napi_create_array_with_length(
                 self.env,
                 cap,
-                value.get_mut())
-            )?
+                value.get_mut()
+            ))?
         };
         Ok(JsArray::from(value))
     }
@@ -143,8 +143,8 @@ impl Env {
         unsafe {
             Status::result(napi_get_undefined(
                 self.env,
-                undefined.get_mut())
-            )?
+                undefined.get_mut()
+            ))?
         };
         Ok(JsUndefined::from(undefined))
     }
@@ -154,8 +154,8 @@ impl Env {
         unsafe {
             Status::result(napi_get_null(
                 self.env,
-                null.get_mut())
-            )?
+                null.get_mut()
+            ))?
         };
         Ok(JsNull::from(null))
     }
@@ -169,8 +169,8 @@ impl Env {
                 Box::into_raw(external) as *mut c_void,
                 Some(__pinar_drop_box::<External<T>>),
                 std::ptr::null_mut(),
-                result.get_mut())
-            )?;
+                result.get_mut()
+            ))?;
         }
         Ok(JsExternal::from(result))
     }
@@ -184,8 +184,8 @@ impl Env {
                 Box::into_raw(external) as *mut c_void,
                 Some(__pinar_drop_box::<External<T>>),
                 std::ptr::null_mut(),
-                result.get_mut())
-            )?;
+                result.get_mut()
+            ))?;
         }
         Ok(JsExternal::from(result))
     }
@@ -199,8 +199,8 @@ impl Env {
                 Box::into_raw(external) as *mut c_void,
                 Some(__pinar_drop_box::<External<T>>),
                 std::ptr::null_mut(),
-                result.get_mut())
-            )?;
+                result.get_mut()
+            ))?;
         }
         Ok(JsExternal::from(result))
     }
@@ -231,16 +231,16 @@ impl Env {
                 name.len(),
                 Some(__pinar_callback_function),
                 raw as *mut std::ffi::c_void,
-                result.get_mut())
-            )?;
+                result.get_mut()
+            ))?;
             Status::result(napi_add_finalizer(
                 self.env,
                 result.get(),
                 raw as *mut std::ffi::c_void,
                 Some(__pinar_drop_rc::<ModuleFunction>),
                 std::ptr::null_mut(),
-                std::ptr::null_mut())
-            )?;
+                std::ptr::null_mut()
+            ))?;
         }
         Ok(JsFunction::from(result))
     }
@@ -257,8 +257,8 @@ impl Env {
                 &mut argc as *mut usize,
                 argv.as_mut_ptr() as *mut napi_value,
                 this.get_mut(),
-                std::mem::transmute(&mut data_ptr))
-            )?;
+                &mut data_ptr as *mut *mut D as *mut *mut std::ffi::c_void
+            ))?;
             argv.set_len(argc);
         }
         Ok((data_ptr, Arguments::new(*self, this, &argv)?))
@@ -289,8 +289,8 @@ impl Env {
             Status::result(napi_throw_error(
                 self.env,
                 code_ptr,
-                msg.as_ptr())
-            )?;
+                msg.as_ptr()
+            ))?;
         }
         Err(Status::PendingException.into())
     }
@@ -309,8 +309,8 @@ impl Env {
             Status::result(napi_throw_type_error(
                 self.env,
                 code_ptr,
-                msg.as_ptr())
-            )?;
+                msg.as_ptr()
+            ))?;
         }
         Err(Status::PendingException.into())
     }
@@ -329,8 +329,8 @@ impl Env {
             Status::result(napi_throw_range_error(
                 self.env,
                 code_ptr,
-                msg.as_ptr())
-            )?;
+                msg.as_ptr()
+            ))?;
         }
         Err(Status::PendingException.into())
     }

@@ -68,8 +68,7 @@ impl<'e> JsObject<'e> {
             ))?;
         };
         let array = JsArray::from(value);
-        let res: Vec<_> = array.iter()?.map(|v| v.clone()).collect();
-        Ok(unsafe { std::mem::transmute(res) })
+        array.with_values(JsAny::from)
     }
 
     pub fn has_property<K>(&self, key: K) -> Result<bool>

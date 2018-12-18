@@ -28,8 +28,8 @@ impl<'e> JsArray<'e> {
             Status::result(napi_get_array_length(
                 self.value.env(),
                 self.value.get(),
-                &mut len as *mut u32)
-            )?;
+                &mut len as *mut u32
+            ))?;
         }
         Ok(len as usize)
     }
@@ -44,8 +44,8 @@ impl<'e> JsArray<'e> {
                 self.value.env(),
                 self.value.get(),
                 index,
-                value.get())
-            )?;
+                value.get()
+            ))?;
         };
         Ok(())
     }
@@ -56,8 +56,8 @@ impl<'e> JsArray<'e> {
             Status::result(napi_get_element(
                 self.value.env(),
                 self.value.get(),
-                index, value.get_mut())
-            )?;
+                index, value.get_mut()
+            ))?;
         }
         JsAny::from(value)
     }
@@ -68,8 +68,8 @@ impl<'e> JsArray<'e> {
             Status::result(napi_get_element(
                 self.value.env(),
                 self.value.get(),
-                index, value.get_mut())
-            )?;
+                index, value.get_mut()
+            ))?;
         }
         Ok(value)
     }
@@ -79,6 +79,15 @@ impl<'e> JsArray<'e> {
         let mut vec = Vec::with_capacity(len);
         for i in 0..len {
             vec.push(self.get_value(i as u32)?);
+        }
+        Ok(vec)
+    }
+
+    pub(crate) fn with_values<T>(&self, fun: impl Fn(Value) -> Result<T>) -> Result<Vec<T>> {
+        let len = self.len()?;
+        let mut vec = Vec::with_capacity(len);
+        for i in 0..len {
+            vec.push(fun(self.get_value(i as u32)?)?);
         }
         Ok(vec)
     }
