@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use crate::*;
 use crate::prelude::*;
 use super::*;
+use crate::error::JsClassError;
 
 pub struct JsObject<'e> {
     pub(crate) value: Value,
@@ -160,6 +161,9 @@ impl<'e> JsObject<'e> {
                 self.get_value().value,
                 &mut obj as *mut *mut T as *mut *mut std::ffi::c_void
             ))?;
+        }
+        if obj.is_null() {
+            return Err(JsClassError::Unwrap.into())
         }
         Ok(obj)
     }

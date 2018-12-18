@@ -1,4 +1,5 @@
 
+use std::ops::Deref;
 use std::marker::PhantomData;
 use napi_sys::*;
 use crate::Result;
@@ -72,6 +73,19 @@ pub enum JsAny<'e> {
     BigInt(JsBigInt<'e>),
 }
 
+macro_rules! impl_jsany {
+    (
+        $( ($fn_name:ident, $jstype:ident, $any:ident) ),*,
+    ) => {
+        $(pub fn $fn_name(&self) -> Option<$jstype<'e>> {
+            match self {
+                JsAny::$any(s) => Some(s.clone()),
+                _ => None
+            }
+        })*
+    }
+}
+
 impl<'e> JsAny<'e> {
     #[inline]
     pub(crate) fn from(value: Value) -> Result<JsAny<'e>> {
@@ -118,11 +132,38 @@ impl<'e> JsAny<'e> {
         }
     }
 
+    impl_jsany!(
+        (as_jsarray, JsArray, Array),
+        (as_jsstring, JsString, String),
+        (as_jsobject, JsObject, Object),
+        (as_jsnumber, JsNumber, Number),
+        (as_jssymbol, JsSymbol, Symbol),
+        (as_jsexternal, JsExternal, External),
+        (as_jsfunction, JsFunction, Function),
+        (as_jsboolean, JsBoolean, Boolean),
+        (as_jsbigint, JsBigInt, BigInt),
+    );
+
     pub fn as_bool(&self) -> Option<bool> {
         match self {
             JsAny::Boolean(s) => s.to_rust().ok(),
             _ => None
         }
+    }
+}
+
+pub struct JsThis<'e>(pub JsAny<'e>);
+
+impl<'e> Deref for JsThis<'e> {
+    type Target = JsAny<'e>;
+    fn deref(&self) -> &JsAny<'e> {
+        &self.0
+    }
+}
+
+impl<'e> JsValue for JsThis<'e> {
+    fn get_value(&self) -> Value {
+        self.0.get_value()
     }
 }
 

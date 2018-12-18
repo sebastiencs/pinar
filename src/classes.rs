@@ -1,4 +1,5 @@
 
+use crate::error::{JsError, Error};
 use std::rc::Rc;
 use std::ffi::c_void;
 use napi_sys::*;
@@ -39,6 +40,7 @@ pub unsafe extern "C" fn __pinar_drop_rc<T>(_env: napi_env, data: *mut c_void, _
     Rc::<T>::from_raw(data as *mut T);
 }
 
+#[inline]
 pub(crate) fn execute_safely<F>(env: napi_env, closure: F) -> napi_value
 where
     F: Fn() -> Result<Option<napi_value>>,
@@ -66,7 +68,13 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
     const CLASS_DATA: &'static str = "__pinar_class_data__";
     const PINAR_CLASS_ID: &'static str = "___pinar___class___id___";
 
-    unsafe extern "C" fn __pinar_class_constructor(env: napi_env, cb_info: napi_callback_info) -> napi_value {
+    unsafe extern "C" fn __pinar_class_constructor(
+        env: napi_env,
+        cb_info: napi_callback_info
+    ) -> napi_value
+    {
+        use self::JsClassError::*;
+
         execute_safely(env, || {
             let env = Env::from(env);
             let (class_data, args) = env.callback_info::<JsClassData<Self>>(cb_info)?;
@@ -75,10 +83,11 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
             // 1 JsClassData for each JS instance, + 1 for the JS constructor
             let mut copy_class_data = Rc::clone(&class_data);
             std::mem::forget(class_data);
-            let this = args.this();
+            let this = args.this()?.as_jsobject()
+                                   .ok_or_else(|| ThisConstructor(C::CLASSNAME))?;
 
-            if this.has_property(C::PINAR_CLASS_ID)? == false {
-                return Err(JsClassError::ThisConstructor(C::CLASSNAME).into())
+            if !(this.has_property(C::PINAR_CLASS_ID)?) {
+                return Err(ThisConstructor(C::CLASSNAME).into())
             }
 
             let class = if copy_class_data.args_rust.is_some() {
@@ -109,32 +118,43 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
         })
     }
 
-    unsafe extern "C" fn __pinar_class_dispatch(env: napi_env, cb_info: napi_callback_info) -> napi_value {
+    unsafe extern "C" fn __pinar_class_dispatch(
+        env: napi_env,
+        cb_info: napi_callback_info
+    ) -> napi_value
+    {
+        use self::JsClassError::*;
+
         execute_safely(env, || {
             let env = Env::from(env);
             let (key, args) = env.callback_info::<usize>(cb_info)?;
 
-            let this = args.this();
-            let property = this.get(Self::CLASS_DATA)?;
+            let this = args.this()?
+                           .as_jsobject()
+                           .ok_or_else(|| ThisMethod(C::CLASSNAME))?;
+
+            let external = this.get(Self::CLASS_DATA)?
+                               .as_jsexternal()
+                               .ok_or_else(|| ExternalClassData)?;
+
             let this = this.napi_unwrap::<Self>()?;
+            let class_data = external.get_rc::<JsClassData<Self>>()?;
 
-            if let JsAny::External(e) = property {
-                let external = e.get_rc::<JsClassData<Self>>()?;
+            if class_data.id != TypeId::of::<Self>() {
+                return Err(WrongClass.into());
+            }
 
-                if external.id != TypeId::of::<Self>() {
-                    return Err(JsClassError::WrongClass.into());
-                }
-
-                if let Some(handler) = external.methods.get(key as usize) {
-                    return handler.handle(&mut *this, &args);
-                }
-                return Err(JsClassError::WrongHandler.into());
-            };
-            Err(JsClassError::ExternalClassData.into())
+            match class_data.methods.get(key as usize) {
+                Some(method) => method.call(&mut *this, &args),
+                _ => Err(WrongHandler.into())
+            }
         })
     }
 
-    unsafe extern "C" fn __pinar_nop(_env: napi_env, _cb_info: napi_callback_info) -> napi_value {
+    unsafe extern "C" fn __pinar_nop(
+        _env: napi_env,
+        _cb_info: napi_callback_info
+    ) -> napi_value {
         std::ptr::null_mut()
     }
 }
@@ -333,7 +353,7 @@ where
 }
 
 pub trait ClassMethodHandler<C: JsClass> {
-    fn handle(&self, this: &mut C, args: &Arguments) -> Result<Option<napi_value>>;
+    fn call(&self, this: &mut C, args: &Arguments) -> Result<Option<napi_value>>;
 }
 
 impl<C, A, R> ClassMethodHandler<C> for ClassMethod<C, A, R>
@@ -342,7 +362,7 @@ where
     A: FromArguments,
     R: for <'env> JsReturn<'env>
 {
-    fn handle(&self, this: &mut C, args: &Arguments) -> Result<Option<napi_value>> {
+    fn call(&self, this: &mut C, args: &Arguments) -> Result<Option<napi_value>> {
         let env = args.env();
         let args = A::from_args(args)?;
 

@@ -27,8 +27,8 @@ impl Arguments {
         })
     }
 
-    pub fn this<'e>(&self) -> JsObject<'e> {
-        JsObject::from(self.this)
+    pub fn this<'e>(&self) -> Result<JsThis<'e>> {
+        Ok(JsThis(JsAny::from(self.this)?))
     }
 
     pub fn env(&self) -> Env {
@@ -117,7 +117,7 @@ where
                     args: array.values()?,
                     current_arg: Cell::new(0),
                     env: args.env(),
-                    this: args.this().get_value()
+                    this: args.this()?.get_value()
                 };
 
                 (0..array.len()?).map(|_| A::from_args(&args))
@@ -132,6 +132,12 @@ where
 impl FromArguments for Env {
     fn from_args(args: &Arguments) -> Result<Self> {
         Ok(args.env)
+    }
+}
+
+impl<'e> FromArguments for JsThis<'e> {
+    fn from_args(args: &Arguments) -> Result<Self> {
+        args.this()
     }
 }
 

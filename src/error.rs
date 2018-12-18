@@ -42,6 +42,10 @@ pub enum JsClassError {
     WrongClass,
     #[fail(display = "Wrong 'this' value. Did you call the constructor with 'new' ? (ex: 'let a = new {}()')", _0)]
     ThisConstructor(&'static str),
+    #[fail(display = "Wrong 'this' value on a method call of the class {}", _0)]
+    ThisMethod(&'static str),
+    #[fail(display = "Fail to unwrap the class. Please report on pinar repo.")]
+    Unwrap,
 }
 
 #[derive(Fail, Debug)]
