@@ -58,7 +58,6 @@ pub struct JsBigInt<'e> {
     pub(crate) phantom: PhantomData<&'e ()>
 }
 
-//#[derive(Copy, Clone)]
 pub enum JsAny<'e> {
     String(JsString<'e>),
     Object(JsObject<'e>),
@@ -75,11 +74,20 @@ pub enum JsAny<'e> {
 
 macro_rules! impl_jsany {
     (
+        RUST_TYPES:
+        $( ($rfn_name:ident, $rtype:ident, $rany:ident) ),*,
+        JS_TYPES:
         $( ($fn_name:ident, $jstype:ident, $any:ident) ),*,
     ) => {
         $(pub fn $fn_name(&self) -> Option<$jstype<'e>> {
             match self {
                 JsAny::$any(s) => Some(s.clone()),
+                _ => None
+            }
+        })*
+        $(pub fn $rfn_name(&self) -> Option<$rtype> {
+            match self {
+                JsAny::$rany(s) => s.to_rust().ok(),
                 _ => None
             }
         })*
@@ -125,14 +133,12 @@ impl<'e> JsAny<'e> {
         }
     }
 
-    pub fn as_string(&self) -> Option<String> {
-        match self {
-            JsAny::String(s) => s.to_rust().ok(),
-            _ => None
-        }
-    }
-
     impl_jsany!(
+        RUST_TYPES:
+        (as_string, String, String),
+        (as_number, i64, Number),
+        (as_bool, bool, Boolean),
+        JS_TYPES:
         (as_jsarray, JsArray, Array),
         (as_jsstring, JsString, String),
         (as_jsobject, JsObject, Object),
@@ -143,16 +149,15 @@ impl<'e> JsAny<'e> {
         (as_jsboolean, JsBoolean, Boolean),
         (as_jsbigint, JsBigInt, BigInt),
     );
-
-    pub fn as_bool(&self) -> Option<bool> {
-        match self {
-            JsAny::Boolean(s) => s.to_rust().ok(),
-            _ => None
-        }
-    }
 }
 
-pub struct JsThis<'e>(pub JsAny<'e>);
+pub struct JsThis<'e>(pub(crate) JsAny<'e>);
+
+impl<'e> JsThis<'e> {
+    pub fn get_any(&self) -> JsAny<'e> {
+        self.0.clone()
+    }
+}
 
 impl<'e> Deref for JsThis<'e> {
     type Target = JsAny<'e>;

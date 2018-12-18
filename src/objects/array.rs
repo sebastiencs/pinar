@@ -104,10 +104,10 @@ impl<'a, 'e> Iterator for JsArrayIterator<'a, 'e> {
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             let index = self.index;
-            self.index += 1;
             if index >= self.len {
                 return None;
             }
+            self.index += 1;
             if let Ok(item) = self.array.get(index as u32) {
                 return Some(item);
             }
