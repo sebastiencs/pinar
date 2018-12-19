@@ -125,3 +125,9 @@ already been extracted. Use Option<Box<T>>")
         }
     }
 }
+
+impl<'e, T: 'static> ToRust<Option<Box<T>>> for JsExternal<'e> {
+    fn to_rust(&self) -> Result<Option<Box<T>>> {
+        self.take_box()
+    }
+}

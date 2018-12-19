@@ -275,12 +275,12 @@ impl Env {
         Err(Status::PendingException.into())
     }
 
-    pub fn throw_error<M>(&self, msg: M, code: Option<String>) -> Result<()>
+    pub fn throw_error<M>(&self, msg: M, code: impl Into<Option<String>>) -> Result<()>
     where
         M: AsRef<str>
     {
         let msg = CString::new(msg.as_ref()).unwrap();
-        let code = code.map(|c| CString::new(c).unwrap());
+        let code = code.into().map(|c| CString::new(c).unwrap());
         let code_ptr = match code.as_ref() {
             Some(code) => code.as_ptr(),
             _ => std::ptr::null()
@@ -295,12 +295,12 @@ impl Env {
         Err(Status::PendingException.into())
     }
 
-    pub fn throw_type_error<M>(&self, msg: M, code: Option<&str>) -> Result<()>
+    pub fn throw_type_error<'s, M>(&self, msg: M, code: impl Into<Option<&'s str>>) -> Result<()>
     where
         M: AsRef<str>
     {
         let msg = CString::new(msg.as_ref()).unwrap();
-        let code = code.map(|c| CString::new(c).unwrap());
+        let code = code.into().map(|c| CString::new(c).unwrap());
         let code_ptr = match code.as_ref() {
             Some(code) => code.as_ptr(),
             _ => std::ptr::null()
@@ -315,12 +315,12 @@ impl Env {
         Err(Status::PendingException.into())
     }
 
-    pub fn throw_range_error<M>(&self, msg: M, code: Option<&str>) -> Result<()>
+    pub fn throw_range_error<'s, M>(&self, msg: M, code: impl Into<Option<&'s str>>) -> Result<()>
     where
         M: AsRef<str>
     {
         let msg = CString::new(msg.as_ref()).unwrap();
-        let code = code.map(|c| CString::new(c).unwrap());
+        let code = code.into().map(|c| CString::new(c).unwrap());
         let code_ptr = match code.as_ref() {
             Some(code) => code.as_ptr(),
             _ => std::ptr::null()
@@ -335,7 +335,7 @@ impl Env {
         Err(Status::PendingException.into())
     }
 
-    pub fn run_script<S>(&self, script: S) -> Result<JsAny>
+    pub fn run_script<'e, S>(&self, script: S) -> Result<JsAny<'e>>
     where
         S: AsRef<str>
     {

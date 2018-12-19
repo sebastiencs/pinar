@@ -193,8 +193,20 @@ from_args_js!(
     (i64, Number, "number (integer)"),
     (f64, Number, "number (double)"),
     (String, String, "string"),
-    (bool, Boolean, "string"),
+    (bool, Boolean, "boolean"),
     (Box, External, "external (box)", T),
     (Rc, External, "external (rc)", T),
     (Arc, External, "external (arc)", T)
 );
+
+// TODO: need specialization (nightly)
+// impl<T> FromArguments for Option<Box<T>>
+// {
+//     fn from_args(args: &Arguments) -> Result<Self> {
+//         match args.next_arg() {
+//             Some(JsAny::External(value)) => value.to_rust(),
+//             Some(_) => Err(ArgumentsError::wrong_type("external (Option<Box>)", args.arg_number())),
+//             _ => Err(ArgumentsError::missing(args.arg_number()))
+//         }
+//     }
+// }
