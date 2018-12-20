@@ -3,6 +3,10 @@ name = "pinar"
 version = "0.1.0"
 authors = ["Sebastien Chapuis <sebastien@chapu.is>"]
 edition = "2018"
+description = "Library to write node native modules with N-API"
+license = "MIT"
+homepage = "https://pinar.rs"
+repository = "https://github.com/sebastiencs/pinar"
 
 [lib]
 crate-type = ["cdylib"]
@@ -19,9 +23,9 @@ default = ["pinar-serde"]
 pinar-serde = ["serde", "serde_derive", "pinar-derive"]
 
 [dependencies]
-napi-sys = { path = "../napi-sys" }
+napi-sys = { git = "https://github.com/sebastiencs/napi-sys" }
 failure = "0.1.3"
 
 serde = { version = "1.*", optional = true}
 serde_derive = { version = "1.*", optional = true}
-pinar-derive = { path = "../pinar-derive", optional = true }
+pinar-derive = { git = "https://github.com/sebastiencs/pinar-derive", optional = true }
