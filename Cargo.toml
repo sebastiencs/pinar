@@ -23,7 +23,7 @@ default = ["pinar-serde"]
 pinar-serde = ["serde", "serde_derive", "pinar-derive"]
 
 [dependencies]
-napi-sys = { git = "https://github.com/sebastiencs/napi-sys" }
+napi-sys = { version = "0.1", package = "pinar-napi-sys" }
 failure = "0.1.3"
 
 serde = { version = "1.*", optional = true}
