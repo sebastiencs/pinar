@@ -2,7 +2,11 @@
 //#![feature(optin_builtin_traits)]
 //#![feature(specialization)]
 //#![feature(tool_lints)]
-#![feature(core_intrinsics)]
+#![cfg_attr(
+    feature = "nightly",
+    feature(core_intrinsics)
+)]
+//#![feature(core_intrinsics)]
 #![warn(
      clippy::all,
      clippy::cargo,
