@@ -268,7 +268,7 @@ impl Env {
     where
         V: ToJs<'e>
     {
-        let error = error.to_js(&self)?.get_value();
+        let error = error.to_js(*self)?.get_value();
         unsafe {
             Status::result(napi_throw(self.env, error.get()))?;
         }

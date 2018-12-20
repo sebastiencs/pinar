@@ -9,7 +9,7 @@ use crate::Result;
 
 pub trait ToJs<'e> {
     type Value: JsValue;
-    fn to_js(self, _: &Env) -> Result<Self::Value>;
+    fn to_js(self, _: Env) -> Result<Self::Value>;
 }
 
 macro_rules! impl_tojs {
@@ -19,7 +19,7 @@ macro_rules! impl_tojs {
         $(
             impl<'e, 'v> ToJs<'e> for $jstype<'v> {
                 type Value = Self;
-                fn to_js(self, _: &Env) -> Result<Self> {
+                fn to_js(self, _: Env) -> Result<Self> {
                     Ok(self)
                 }
             }
@@ -43,21 +43,21 @@ impl_tojs!(
 
 impl<'e> ToJs<'e> for Value {
     type Value = Self;
-    fn to_js(self, _: &Env) -> Result<Self> {
+    fn to_js(self, _: Env) -> Result<Self> {
         Ok(self)
     }
 }
 
 impl<'e> ToJs<'e> for i64 {
     type Value = JsNumber<'e>;
-    fn to_js(self, env: &Env) -> Result<JsNumber<'e>> {
+    fn to_js(self, env: Env) -> Result<JsNumber<'e>> {
         env.number(self)
     }
 }
 
 impl<'e> ToJs<'e> for String {
     type Value = JsString<'e>;
-    fn to_js(self, env: &Env) -> Result<JsString<'e>> {
+    fn to_js(self, env: Env) -> Result<JsString<'e>> {
         env.string(self)
     }
 }
@@ -69,7 +69,7 @@ where
     S: BuildHasher
 {
     type Value = JsObject<'e>;
-    fn to_js(self, env: &Env) -> Result<JsObject<'e>> {
+    fn to_js(self, env: Env) -> Result<JsObject<'e>> {
         let object = env.object()?;
         for (key, value) in self.into_iter() {
             object.set(key, value)?;
@@ -83,7 +83,7 @@ where
     T: ToJs<'e>
 {
     type Value = JsArray<'e>;
-    fn to_js(self, env: &Env) -> Result<JsArray<'e>> {
+    fn to_js(self, env: Env) -> Result<JsArray<'e>> {
         let array = env.array_with_capacity(self.len())?;
         for (index, value) in self.into_iter().enumerate() {
             array.set(index as u32, value)?;
@@ -94,28 +94,28 @@ where
 
 impl<'e, 's> ToJs<'e> for &'s str {
     type Value = JsString<'e>;
-    fn to_js(self, env: &Env) -> Result<JsString<'e>> {
+    fn to_js(self, env: Env) -> Result<JsString<'e>> {
         env.string(self)
     }
 }
 
 impl<'e, T: 'static> ToJs<'e> for Box<T> {
     type Value = JsExternal<'e>;
-    fn to_js(self, env: &Env) -> Result<JsExternal<'e>> {
+    fn to_js(self, env: Env) -> Result<JsExternal<'e>> {
         env.external_box(self)
     }
 }
 
 impl<'e, T: 'static> ToJs<'e> for Rc<T> {
     type Value = JsExternal<'e>;
-    fn to_js(self, env: &Env) -> Result<JsExternal<'e>> {
+    fn to_js(self, env: Env) -> Result<JsExternal<'e>> {
         env.external_rc(self)
     }
 }
 
 impl<'e, T: 'static> ToJs<'e> for Arc<T> {
     type Value = JsExternal<'e>;
-    fn to_js(self, env: &Env) -> Result<JsExternal<'e>> {
+    fn to_js(self, env: Env) -> Result<JsExternal<'e>> {
         env.external_arc(self)
     }
 }

@@ -27,7 +27,7 @@ pub struct PropertyDescriptor {
 }
 
 impl PropertyDescriptor {
-    pub fn method<S: AsRef<str>>(env: &Env, name: S, cb: napi_callback) -> Result<Self> {
+    pub fn method<S: AsRef<str>>(env: Env, name: S, cb: napi_callback) -> Result<Self> {
         Ok(PropertyDescriptor {
             name: env.string(name.as_ref())?.get_value().value,
             method: Some(cb),
@@ -38,7 +38,7 @@ impl PropertyDescriptor {
         })
     }
 
-    pub fn set_get<S: AsRef<str>>(env: &Env, name: S, cb: napi_callback) -> Result<Self> {
+    pub fn set_get<S: AsRef<str>>(env: Env, name: S, cb: napi_callback) -> Result<Self> {
         Ok(PropertyDescriptor {
             name: env.string(name.as_ref())?.get_value().value,
             method: None,
@@ -49,7 +49,7 @@ impl PropertyDescriptor {
         })
     }
 
-    pub fn value<'e, S: AsRef<str>, V: ToJs<'e>>(env: &Env, name: S, value: V) -> Result<Self> {
+    pub fn value<'e, S: AsRef<str>, V: ToJs<'e>>(env: Env, name: S, value: V) -> Result<Self> {
         Ok(PropertyDescriptor {
             name: env.string(name.as_ref())?.get_value().value,
             method: None,

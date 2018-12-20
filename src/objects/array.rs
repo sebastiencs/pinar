@@ -38,7 +38,7 @@ impl<'e> JsArray<'e> {
     where
         V: ToJs<'e>
     {
-        let value = value.to_js(&self.value.env)?.get_value();
+        let value = value.to_js(self.value.env)?.get_value();
         unsafe {
             Status::result(napi_set_element(
                 self.value.env(),

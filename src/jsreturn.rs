@@ -17,7 +17,7 @@ where
     type Value = T::Value;
     type Error = Error;
     fn get_result(self, env: Env) -> Result<Option<Self::Value>, Self::Error> {
-        Ok(Some(self.to_js(&env)?))
+        Ok(Some(self.to_js(env)?))
     }
 }
 

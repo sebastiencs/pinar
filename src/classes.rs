@@ -100,7 +100,7 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
             let class = Box::new(class);
 
             this.define_property(PropertyDescriptor::value(
-                &env,
+                env,
                 Self::CLASS_DATA,
                 copy_class_data
             )?)?;

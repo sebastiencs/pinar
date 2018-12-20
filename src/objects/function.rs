@@ -16,12 +16,12 @@ impl<'e> JsFunction<'e> {
     }
 
     pub fn call_with_this(&self, this: impl ToJs<'e>, args: impl MultiJs) -> Result<JsAny<'e>> {
-        let args: Vec<_> = args.make_iter(&self.value.env)?
+        let args: Vec<_> = args.make_iter(self.value.env)?
                                .into_iter()
                                .map(|v| v.value)
                                .collect();
         let mut result = Value::new(self.value.env);
-        let this = this.to_js(&self.value.env)?;
+        let this = this.to_js(self.value.env)?;
         unsafe {
             Status::result(napi_call_function(
                 self.value.env(),
@@ -36,7 +36,7 @@ impl<'e> JsFunction<'e> {
     }
 
     pub fn new_instance(&self, args: impl MultiJs) -> Result<JsObject<'e>> {
-        let args: Vec<_> = args.make_iter(&self.value.env)?
+        let args: Vec<_> = args.make_iter(self.value.env)?
                                .into_iter()
                                .map(|v| v.value)
                                .collect();

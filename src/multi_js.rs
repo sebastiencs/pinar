@@ -3,7 +3,7 @@ use crate::*;
 
 pub trait MultiJs {
     type Result: IntoIterator<Item = Value>;
-    fn make_iter(self, env: &Env) -> Result<Self::Result>;
+    fn make_iter(self, env: Env) -> Result<Self::Result>;
 }
 
 impl<'e, A> MultiJs for A
@@ -11,7 +11,7 @@ where
     A: ToJs<'e>,
 {
     type Result = Vec<Value>;
-    fn make_iter(self, env: &Env) -> Result<Self::Result> {
+    fn make_iter(self, env: Env) -> Result<Self::Result> {
         Ok(vec![
             self.to_js(env)?.get_value(),
         ])
@@ -29,7 +29,7 @@ macro_rules! multi_js_tuples {
             {
                 type Result = Vec<Value>;
                 #[allow(unused_variables)]
-                fn make_iter(self, env: &Env) -> Result<Self::Result> {
+                fn make_iter(self, env: Env) -> Result<Self::Result> {
                     Ok(vec![
                         $(self.$n.to_js(env)?.get_value(),)*
                     ])

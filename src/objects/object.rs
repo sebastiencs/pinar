@@ -16,8 +16,8 @@ impl<'e> JsObject<'e> {
         K: KeyProperty + ToJs<'e>,
         V: ToJs<'e>
     {
-        let key = key.to_js(&self.value.env)?.get_value();
-        let value = value.to_js(&self.value.env)?.get_value();
+        let key = key.to_js(self.value.env)?.get_value();
+        let value = value.to_js(self.value.env)?.get_value();
         unsafe {
             Status::result(napi_set_property(
                 self.value.env(),
@@ -33,7 +33,7 @@ impl<'e> JsObject<'e> {
     where
         K: KeyProperty + ToJs<'e>
     {
-        let key = key.to_js(&self.value.env)?.get_value();
+        let key = key.to_js(self.value.env)?.get_value();
         let mut value = Value::new(self.value.env);
         unsafe {
             Status::result(napi_get_property(
@@ -77,7 +77,7 @@ impl<'e> JsObject<'e> {
         K: KeyProperty + ToJs<'e>
     {
         let mut result = false;
-        let key = key.to_js(&self.value.env)?.get_value();
+        let key = key.to_js(self.value.env)?.get_value();
         unsafe {
             Status::result(napi_has_property(
                 self.value.env(),
@@ -94,7 +94,7 @@ impl<'e> JsObject<'e> {
         K: KeyProperty + ToJs<'e>
     {
         let mut result = false;
-        let key = key.to_js(&self.value.env)?.get_value();
+        let key = key.to_js(self.value.env)?.get_value();
         unsafe {
             Status::result(napi_has_own_property(
                 self.value.env(),
@@ -111,7 +111,7 @@ impl<'e> JsObject<'e> {
         K: KeyProperty + ToJs<'e>
     {
         let mut result = false;
-        let key = key.to_js(&self.value.env)?.get_value();
+        let key = key.to_js(self.value.env)?.get_value();
         unsafe {
             Status::result(napi_delete_property(
                 self.value.env(),
