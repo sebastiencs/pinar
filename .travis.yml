@@ -4,3 +4,6 @@ rust:
   - beta
   - nightly
 cache: cargo
+script:
+  - cargo build --all
+  # - cargo test --verbose --all
