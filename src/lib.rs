@@ -209,19 +209,17 @@ macro_rules! register_module {
             use napi_sys::*;
 
             extern "C" fn register_module() {
-                unsafe {
-                    static mut MODULE_DESCRIPTOR: napi_module =
-                        napi_module {
-                            nm_version: 1,
-                            nm_flags: 0,
-                            nm_filename: std::ptr::null(),
-                            nm_modname: std::ptr::null(),
-                            nm_register_func: Some(init_module),
-                            nm_priv: 0 as *mut _,
-                            reserved: [0 as *mut _; 4],
-                        };
-                    napi_module_register(&mut MODULE_DESCRIPTOR);
-                }
+                static mut MODULE_DESCRIPTOR: napi_module = napi_module {
+                    nm_version: 1,
+                    nm_flags: 0,
+                    nm_filename: std::ptr::null(),
+                    nm_modname: std::ptr::null(),
+                    nm_register_func: Some(init_module),
+                    nm_priv: 0 as *mut _,
+                    reserved: [0 as *mut _; 4],
+                };
+
+                unsafe { napi_module_register(&mut MODULE_DESCRIPTOR) };
 
                 extern "C" fn init_module(env: napi_env, export: napi_value) -> napi_value {
                     match $init(ModuleBuilder::new(env, export)) {
