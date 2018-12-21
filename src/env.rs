@@ -1,8 +1,9 @@
 
+use crate::module::__pinar_dispatch_function;
 use crate::ToJs;
 use crate::classes::__pinar_drop_rc;
 use std::os::raw::c_char;
-use crate::__pinar_callback_function;
+//use crate::__pinar_callback_function;
 use crate::module::ModuleFunction;
 use crate::jsreturn::JsReturn;
 use crate::arguments::{FromArguments, Arguments};
@@ -229,7 +230,7 @@ impl Env {
                 self.env,
                 name.as_ptr() as *const i8,
                 name.len(),
-                Some(__pinar_callback_function),
+                Some(__pinar_dispatch_function),
                 raw as *mut std::ffi::c_void,
                 result.get_mut()
             ))?;

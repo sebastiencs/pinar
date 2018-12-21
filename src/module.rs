@@ -91,8 +91,7 @@ impl<'e> ModuleBuilder<'e> {
     }
 }
 
-#[inline]
-pub fn __pinar_dispatch_function(env: napi_env, info: napi_callback_info) -> napi_value {
+pub(crate) extern "C" fn __pinar_dispatch_function(env: napi_env, info: napi_callback_info) -> napi_value {
     execute_safely(env, || {
         let env = Env::from(env);
         let (fun, args) = env.callback_info::<ModuleFunction>(info)?;
@@ -146,7 +145,7 @@ where
     }
 }
 
-pub trait CallbackHandler {
+pub(crate) trait CallbackHandler {
     fn handle(&self, args: &Arguments) -> Result<Option<napi_value>>;
 }
 

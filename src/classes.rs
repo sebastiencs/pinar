@@ -30,12 +30,12 @@ trait JsClassInternal {
     const PINAR_CLASS_ID: &'static str;
 }
 
-pub unsafe extern "C" fn __pinar_drop_box<T>(_env: napi_env, data: *mut c_void, _finalize_hint: *mut c_void) {
+pub(crate) unsafe extern "C" fn __pinar_drop_box<T>(_env: napi_env, data: *mut c_void, _finalize_hint: *mut c_void) {
     // println!("DROPPING BOX {:?} {:x?}", std::intrinsics::type_name::<T>(), data);
     Box::<T>::from_raw(data as *mut T);
 }
 
-pub unsafe extern "C" fn __pinar_drop_rc<T>(_env: napi_env, data: *mut c_void, _finalize_hint: *mut c_void) {
+pub(crate) unsafe extern "C" fn __pinar_drop_rc<T>(_env: napi_env, data: *mut c_void, _finalize_hint: *mut c_void) {
     // println!("DROPPING RC {:?} {:x?}", std::intrinsics::type_name::<T>(), data);
     Rc::<T>::from_raw(data as *mut T);
 }
@@ -159,7 +159,7 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
     }
 }
 
-pub struct JsClassData<C: JsClass> {
+struct JsClassData<C: JsClass> {
     id: TypeId,
     args_rust: Option<C::ArgsConstructor>,
     methods: Vec<Rc<ClassMethodHandler<C>>>
@@ -181,7 +181,7 @@ pub struct ClassBuilder<C: JsClass> {
     name: String
 }
 
-pub struct ClassProperty<C: JsClass> {
+struct ClassProperty<C: JsClass> {
     name: CString,
     method: Option<Rc<ClassMethodHandler<C>>>,
     accessor: Option<Rc<ClassMethodHandler<C>>>,
@@ -327,7 +327,7 @@ pub struct SomeClass {
     number: i64
 }
 
-pub struct ClassMethod<C, A, R>
+struct ClassMethod<C, A, R>
 where
     C: JsClass,
     A: FromArguments,
@@ -352,7 +352,7 @@ where
     }
 }
 
-pub trait ClassMethodHandler<C: JsClass> {
+trait ClassMethodHandler<C: JsClass> {
     fn call(&self, this: &mut C, args: &Arguments) -> Result<Option<napi_value>>;
 }
 

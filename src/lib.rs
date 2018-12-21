@@ -17,7 +17,7 @@
 
 use crate::arguments::{Arguments, FromArguments};
 use crate::error::ArgumentsError;
-use crate::module::__pinar_dispatch_function;
+//use crate::module::__pinar_dispatch_function;
 use std::collections::HashMap;
 use napi_sys::*;
 use crate::module::ModuleBuilder;
@@ -25,21 +25,21 @@ use crate::objects::*;
 use crate::env::Env;
 use crate::to_js::ToJs;
 
-mod status;
-mod value;
-mod module;
-mod error;
-mod jsreturn;
-mod classes;
-mod property_descriptor;
+pub mod status;
+pub mod value;
+pub mod module;
+pub mod error;
+pub mod jsreturn;
+pub mod classes;
+pub mod property_descriptor;
 mod external;
-mod objects;
-mod env;
-mod arguments;
-mod function_threadsafe;
-mod to_rust;
-mod multi_js;
-mod to_js;
+pub mod objects;
+pub mod env;
+pub mod arguments;
+pub mod function_threadsafe;
+pub mod to_rust;
+pub mod multi_js;
+pub mod to_js;
 
 #[cfg(feature = "pinar-serde")]
 mod pinar_serde;
@@ -55,7 +55,7 @@ pub mod prelude {
     pub use crate::module::ModuleBuilder;
     pub use crate::property_descriptor::PropertyDescriptor;
     pub use crate::jsreturn::JsReturn;
-    pub use crate::module::__pinar_dispatch_function;
+    //pub use crate::module::__pinar_dispatch_function;
     pub use crate::arguments::{FromArguments, Arguments};
     pub use crate::classes::{JsClass, ClassBuilder};
     #[cfg(feature = "pinar-serde")]
@@ -178,9 +178,29 @@ fn test13<'e>((env, abc): (Env, ABC)) -> ABC {
     //env.string("weeesh").unwrap()
 }
 
+/// Register the node module
+///
+/// It takes a closure as parameter.
+/// The closure takes a [`ModuleBuilder`] as argument
+/// and returns a [`JsObject`] describing the module
+///
+/// # Example:
+/// ```rust, no_run
+/// register_module!(|module: ModuleBuilder| {
+///     module.with_function("my_function1", my_fn1)
+///           .with_function("my_function2", my_fn2)
+///           .with_class("my_class", || {
+///               ClassBuilder::<SomeClass>::start_build()
+///                   .with_method("easy", SomeClass::jsfunction)
+///                   .with_accessor("easy3", SomeClass::jsaccessor)
+///           })
+///           .build()
+/// });
+/// ```
 #[macro_export]
 macro_rules! register_module {
-    ($module_name:ident, $init:expr) => {
+    ($init:expr) => {
+        #[doc(hidden)]
         #[no_mangle]
         #[cfg_attr(target_os = "linux", link_section = ".ctors")]
         #[cfg_attr(target_os = "macos", link_section = "__DATA,__mod_init_func")]
@@ -213,17 +233,13 @@ macro_rules! register_module {
 
             register_module
         };
-
-        unsafe extern "C" fn __pinar_callback_function(env: napi_env, info: napi_callback_info) -> napi_value {
-            __pinar_dispatch_function(env, info)
-        }
     };
 }
 
 use crate::classes::SomeClass;
 use crate::classes::ClassBuilder;
 
-register_module!(sebastien, |module: ModuleBuilder| {
+register_module!(|module: ModuleBuilder| {
     module.with_function("test1", test1)
           .with_function("my_super_function", test2)
           .with_function("my_other_function", test3)

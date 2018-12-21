@@ -30,10 +30,10 @@ impl Error {
 
 #[derive(Fail, Debug)]
 #[fail(display = "Null pointer on external data")]
-pub struct JsExternalError;
+pub(crate) struct JsExternalError;
 
 #[derive(Fail, Debug)]
-pub enum JsClassError {
+pub(crate) enum JsClassError {
     #[fail(display = "Fail to extract external value from class. Please report on pinar repo.")]
     ExternalClassData,
     #[fail(display = "Wrong handler class. Please report on pinar repo.")]
@@ -49,7 +49,7 @@ pub enum JsClassError {
 }
 
 #[derive(Fail, Debug)]
-pub enum JsFunctionError {
+pub(crate) enum JsFunctionError {
     #[fail(display = "Multiple overload of the function {} failed.", _0)]
     ArgumentsOverload(String),
 //    #[fail(display = "{{ function {} }}: {}.", _0, _1)]
@@ -59,7 +59,7 @@ pub enum JsFunctionError {
 }
 
 #[derive(Fail, Debug, Clone)]
-pub enum ArgumentsError {
+pub(crate) enum ArgumentsError {
     #[fail(display = "{}th argument is missing", _0)]
     Missing(usize),
     #[fail(display = "Wrong type, expected a {} on the {}th argument", _0, _1)]
