@@ -90,6 +90,7 @@ impl<'e> PinarArraySer<'e> {
     }
 }
 
+#[doc(hidden)]
 pub struct PinarMapSer<'e> {
     env: Env,
     obj: JsObject<'e>,

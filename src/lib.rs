@@ -15,34 +15,58 @@
 //     clippy::nursery,
 )]
 
-use crate::arguments::{Arguments, FromArguments};
+//use crate::arguments::{Arguments, FromArguments};
 use crate::error::ArgumentsError;
 //use crate::module::__pinar_dispatch_function;
 use std::collections::HashMap;
 use napi_sys::*;
-use crate::module::ModuleBuilder;
+//use crate::module::ModuleBuilder;
 use crate::objects::*;
-use crate::env::Env;
-use crate::to_js::ToJs;
+//use crate::env::Env;
+//use crate::to_js::ToJs;
 
 pub mod status;
-pub mod value;
-pub mod module;
-pub mod error;
-pub mod jsreturn;
-pub mod classes;
+mod value;
+mod module;
+mod error;
+mod jsreturn;
+mod classes;
 pub mod property_descriptor;
 mod external;
 pub mod objects;
-pub mod env;
-pub mod arguments;
-pub mod function_threadsafe;
-pub mod to_rust;
-pub mod multi_js;
-pub mod to_js;
+mod env;
+mod arguments;
+mod function_threadsafe;
+mod to_rust;
+mod multi_js;
+mod to_js;
 
 #[cfg(feature = "pinar-serde")]
-mod pinar_serde;
+pub mod pinar_serde;
+
+pub(crate) type Result<R> = std::result::Result<R, Error>;
+pub type JsResult<R> = Result<R>;
+
+pub use crate::error::Error;
+pub use crate::env::Env;
+pub use crate::multi_js::MultiJs;
+//pub use crate::objects::*;
+//pub use crate::status::Status;
+pub use crate::to_js::ToJs;
+pub use crate::to_rust::ToRust;
+pub use crate::function_threadsafe::JsFunctionThreadSafe;
+pub use crate::module::ModuleBuilder;
+//pub use crate::property_descriptor::PropertyDescriptor;
+pub use crate::jsreturn::JsReturn;
+//pub use crate::module::__pinar_dispatch_function;
+pub use crate::arguments::{FromArguments, Arguments};
+pub use crate::classes::{JsClass, ClassBuilder};
+//pub use crate::JsResult;
+// #[doc(hidden)]
+// #[cfg(feature = "pinar-serde")]
+// pub use crate::pinar_serde::ser::serialize_to_js;
+// #[cfg(feature = "pinar-serde")]
+// pub use pinar_derive::ToJs;
 
 pub mod prelude {
     pub use crate::env::Env;
@@ -58,14 +82,13 @@ pub mod prelude {
     //pub use crate::module::__pinar_dispatch_function;
     pub use crate::arguments::{FromArguments, Arguments};
     pub use crate::classes::{JsClass, ClassBuilder};
+    pub use crate::JsResult;
     #[cfg(feature = "pinar-serde")]
     pub use crate::pinar_serde::ser::serialize_to_js;
     #[cfg(feature = "pinar-serde")]
-    pub use pinar_derive::ToJs;
+    pub use pinar_derive::{ToJs, FromArguments};
 }
 
-pub type Result<R> = std::result::Result<R, Error>;
-pub use crate::error::Error;
 
 use crate::pinar_serde::ser::serialize_to_js;
 
@@ -235,7 +258,7 @@ macro_rules! register_module {
 }
 
 use crate::classes::SomeClass;
-use crate::classes::ClassBuilder;
+//use crate::classes::ClassBuilder;
 
 register_module!(|module: ModuleBuilder| {
     module.with_function("test1", test1)

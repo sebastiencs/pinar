@@ -17,8 +17,10 @@ mod string;
 mod symbol;
 mod value;
 
+#[doc(hidden)]
+pub use self::value::Value;
+
 pub use self::{
-    value::Value,
     jsref::{
         JsRef,
         AsJsRef
