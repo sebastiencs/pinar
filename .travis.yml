@@ -1,11 +1,24 @@
 language: rust
+
+os:
+  - linux
+  - osx
+  - windows
+
 rust:
   - stable
   - nightly
+
+node_js:
+  - 10
+  - 8
+
 matrix:
   allow_failures:
     - rust: nightly
   fast_finish: true
+
 cache: cargo
+
 script:
   - cargo build --all

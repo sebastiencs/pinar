@@ -42,6 +42,7 @@ pub enum Status {
 }
 
 impl Status {
+    #[inline]
     pub fn result(status: napi_status) -> Result<(), Status> {
         match Status::from(status) {
             Status::Ok => Ok(()),
