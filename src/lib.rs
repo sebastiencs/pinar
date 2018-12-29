@@ -102,6 +102,7 @@ fn testfn(fun: JsFunction) {
     fun.call(Box::new(91)).ok();
     fun.call((10, "a", 12, vec![1, 2, 3])).ok();
     fun.call(ABC { a: 1, b: 2, c: 3, d: TestEnum::B(1), e: None }).ok();
+    fun.call((|Env| {}) as fn(Env) -> ()).ok();
 }
 
 use serde_derive::{Serialize, Deserialize};
@@ -201,6 +202,21 @@ fn test13<'e>((env, abc): (Env, ABC)) -> ABC {
     //env.string("weeesh").unwrap()
 }
 
+fn testab(args: String) {
+}
+
+fn test15<'e>(obj: JsObject) -> JsObject {
+    obj.set("wesh", (|arg| { arg }) as fn(String) -> String);
+    obj
+}
+
+// fn test16(fun: JsFunction) {
+//     //fun(("1"));
+//      fun(1);
+//     // fun(vec![1, 2, 3]);
+//     //fun();
+// }
+
 /// Register the node module
 ///
 /// It takes a closure as parameter.
@@ -274,6 +290,11 @@ register_module!(|module: ModuleBuilder| {
           .with_function("test11", test11)
           .with_function("test12", test12)
           .with_function("test13", test13)
+          .with_function("test14", |()| {
+              1234
+          })
+          .with_function("test15", test15)
+//          .with_function("test16", test16)
           .with_class("someclass", || {
               ClassBuilder::<SomeClass>::start_build()
                   .with_method("easy", SomeClass::jsfunction)

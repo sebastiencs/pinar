@@ -78,6 +78,32 @@ where
     }
 }
 
+impl<'e, A, R> ToJs<'e> for fn(A) -> R
+where
+    A: FromArguments + 'static,
+    R: for<'env> JsReturn<'env> + 'static,
+{
+    type Value = JsFunction<'e>;
+    fn to_js(self, env: Env) -> Result<JsFunction<'e>> {
+        env.function("_pinar_anonymous_", self)
+    }
+}
+
+// This doesn't work :(
+// Will probably work with Chalk and specialization ?
+//
+// impl<'e, F, A, R> ToJs<'e, A, R> for F
+// where
+//     A: FromArguments + 'static,
+//     R: for<'env> JsReturn<'env> + 'static,
+//     F: Fn(A) -> R + 'static
+// {
+//     type Value = JsFunction<'e>;
+//     fn to_js(self, env: Env) -> Result<JsFunction<'e>> {
+//         //env.function("_pinar_anonymous_", self)
+//     }
+// }
+
 impl<'e, T> ToJs<'e> for std::vec::Vec<T>
 where
     T: ToJs<'e>
