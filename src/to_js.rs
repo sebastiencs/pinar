@@ -38,7 +38,8 @@ impl_tojs!(
     JsExternal,
     JsNull,
     JsBoolean,
-    JsBigInt
+    JsBigInt,
+    JsAny
 );
 
 impl<'e> ToJs<'e> for Value {
