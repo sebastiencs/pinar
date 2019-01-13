@@ -29,13 +29,13 @@ impl ModuleFunction {
     pub(crate) fn new<N, Fun, Args, R>(name: N, fun: Fun) -> ModuleFunction
     where
         N: Into<String>,
-        Fun: Fn(Args) -> R + 'static,
+        Fun: CallbackFn<Args, R> + 'static,
         Args: FromArguments + 'static,
         R: for<'env> JsReturn<'env> + 'static
     {
         ModuleFunction {
             name: name.into(),
-            functions: vec![Box::new(Callback::new(fun))]
+            functions: vec![Box::new(fun.make())]
         }
     }
 }
@@ -55,14 +55,14 @@ impl<'e> ModuleBuilder<'e> {
     pub fn with_function<S, Fun, Args, R>(mut self, name: S, fun: Fun) -> Self
     where
         S: Into<String>,
-        Fun: Fn(Args) -> R + 'static,
+        Fun: CallbackFn<Args, R> + 'static,
         Args: FromArguments + 'static,
         R: for<'env> JsReturn<'env> + 'static
     {
         let name = name.into();
         match self.functions.entry(name.clone()) {
             Entry::Occupied(mut funs) => {
-                funs.get_mut().functions.push(Box::new(Callback::new(fun)));
+                funs.get_mut().functions.push(Box::new(fun.make()));
             }
             Entry::Vacant(funs) => {
                 funs.insert(ModuleFunction::new(name, fun));
@@ -122,7 +122,7 @@ pub(crate) extern "C" fn __pinar_dispatch_function(env: napi_env, info: napi_cal
     })
 }
 
-struct Callback<A, R>
+pub struct Callback<A, R>
 where
     A: FromArguments,
     R: for<'env> JsReturn<'env>
@@ -160,7 +160,54 @@ where
 
         Ok((self.fun)(args)
            .get_result(env)
-           .map_err(|e| e.into())?
+           .map_err(Into::into)?
            .map(|res| res.get_value().value))
     }
 }
+
+pub trait CallbackFn<A, R>
+where
+    A: FromArguments,
+    R: for<'env> JsReturn<'env>
+{
+    fn make(self) -> Callback<A, R>;
+}
+
+macro_rules! impl_callbackfn {
+    (
+        $( ( $($arg:ident),* ) ),*
+    ) => {
+        $(
+            impl<$($arg,)* R, Fun> CallbackFn<($($arg,)*), R> for Fun
+            where
+                Fun: Fn($($arg,)*) -> R + 'static,
+                $($arg : FromArguments + 'static,)*
+                R: for<'env> JsReturn<'env> + 'static
+            {
+                #[allow(non_snake_case)]
+                fn make(self) -> Callback<($($arg,)*), R> {
+                    Callback::new(move |($($arg,)*)| (self)($($arg,)*))
+                }
+            }
+        )*
+    }
+}
+
+impl_callbackfn!(
+    (),
+    (A),
+    (A, B),
+    (A, B, C),
+    (A, B, C, D),
+    (A, B, C, D, E),
+    (A, B, C, D, E, F),
+    (A, B, C, D, E, F, G),
+    (A, B, C, D, E, F, G, H),
+    (A, B, C, D, E, F, G, H, I),
+    (A, B, C, D, E, F, G, H, I, J),
+    (A, B, C, D, E, F, G, H, I, J, K),
+    (A, B, C, D, E, F, G, H, I, J, K, L),
+    (A, B, C, D, E, F, G, H, I, J, K, L, M),
+    (A, B, C, D, E, F, G, H, I, J, K, L, M, N),
+    (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O)
+);
