@@ -188,31 +188,29 @@ struct ClassProperty<C: JsClass> {
 }
 
 impl<C: JsClass + 'static> ClassProperty<C> {
-    pub fn method<S, A, R, Method>(name: S, method: Method) -> ClassProperty<C>
+    pub fn method<S, A, R>(name: S, method: ClassMethod<C, A, R>) -> ClassProperty<C>
     where
         S: AsRef<str>,
         A: FromArguments + 'static,
         R: for <'env> JsReturn<'env> + 'static,
-        Method: Fn(&C, A) -> R + 'static
     {
         ClassProperty {
             name: CString::new(name.as_ref()).unwrap(),
-            method: Some(Rc::new(ClassMethod::new(method))),
+            method: Some(Rc::new(method)),
             accessor: None
         }
     }
 
-    pub fn accessor<S, A, R, Accessor>(name: S, accessor: Accessor) -> ClassProperty<C>
+    pub fn accessor<S, A, R>(name: S, accessor: ClassMethod<C, A, R>) -> ClassProperty<C>
     where
         S: AsRef<str>,
         A: FromArguments + 'static,
         R: for <'env> JsReturn<'env> + 'static,
-        Accessor: Fn(&C, Option<A>) -> R + 'static
     {
         ClassProperty {
             name: CString::new(name.as_ref()).unwrap(),
             method: None,
-            accessor: Some(Rc::new(ClassMethod::new(accessor)))
+            accessor: Some(Rc::new(accessor))
         }
     }
 }
@@ -234,9 +232,9 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
         S: AsRef<str>,
         A: FromArguments + 'static,
         R: for <'env> JsReturn<'env> + 'static,
-        Method: Fn(&C, A) -> R + 'static
+        Method: MethodFn<C, A, R> + 'static
     {
-        self.props.push(ClassProperty::method(name, method));
+        self.props.push(ClassProperty::method(name, method.make()));
         self
     }
 
@@ -245,9 +243,9 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
         S: AsRef<str>,
         A: FromArguments + 'static,
         R: for <'env> JsReturn<'env> + 'static,
-        Accessor: Fn(&C, Option<A>) -> R + 'static
+        Accessor: Fn(&mut C, Option<A>) -> R + 'static
     {
-        self.props.push(ClassProperty::accessor(name, accessor));
+        self.props.push(ClassProperty::accessor(name, ClassMethod::new(accessor)));
         self
     }
 
@@ -327,13 +325,65 @@ pub struct SomeClass {
     number: i64
 }
 
-struct ClassMethod<C, A, R>
+// TODO: Use https://github.com/rust-lang/rust/pull/55986
+//       when it reaches stable
+
+pub trait MethodFn<C, A, R>
+where
+    C: JsClass,
+    A: FromArguments,
+    R: for<'env> JsReturn<'env>
+{
+    fn make(self) -> ClassMethod<C, A, R>;
+}
+
+macro_rules! impl_methodfn {
+    (
+        $( ( $($arg:ident),* ) ),*
+    ) => {
+        $(
+            impl<$($arg,)* R, Class, Fun> MethodFn<Class, ($($arg,)*), R> for Fun
+            where
+                Fun: Fn(&mut Class, $($arg,)*) -> R + 'static,
+                Class: JsClass,
+                $($arg : FromArguments + 'static,)*
+                R: for<'env> JsReturn<'env> + 'static
+            {
+                #[allow(non_snake_case)]
+                fn make(self) -> ClassMethod<Class, ($($arg,)*), R> {
+                    ClassMethod::new(move |s, ($($arg,)*)| (self)(s, $($arg,)*))
+                }
+            }
+        )*
+    }
+}
+
+impl_methodfn!(
+    (),
+    (A),
+    (A, B),
+    (A, B, C),
+    (A, B, C, D),
+    (A, B, C, D, E),
+    (A, B, C, D, E, F),
+    (A, B, C, D, E, F, G),
+    (A, B, C, D, E, F, G, H),
+    (A, B, C, D, E, F, G, H, I),
+    (A, B, C, D, E, F, G, H, I, J),
+    (A, B, C, D, E, F, G, H, I, J, K),
+    (A, B, C, D, E, F, G, H, I, J, K, L),
+    (A, B, C, D, E, F, G, H, I, J, K, L, M),
+    (A, B, C, D, E, F, G, H, I, J, K, L, M, N),
+    (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O)
+);
+
+pub struct ClassMethod<C, A, R>
 where
     C: JsClass,
     A: FromArguments,
     R: for <'env> JsReturn<'env>
 {
-    fun: Box<Fn(&C, A) -> R>,
+    fun: Box<Fn(&mut C, A) -> R>,
 }
 
 impl<C, A, R> ClassMethod<C, A, R>
@@ -344,7 +394,7 @@ where
 {
     fn new<F>(fun: F) -> Self
     where
-        F: Fn(&C, A) -> R + 'static
+        F: Fn(&mut C, A) -> R + 'static
     {
         ClassMethod {
             fun: Box::new(fun),
@@ -378,36 +428,49 @@ impl JsClass for SomeClass {
     type ArgsConstructor = (String, i64);
 
     fn constructor(arg: Self::ArgsConstructor) -> Result<Self> {
-        Ok(SomeClass{ number: arg.1 })
+        Ok(SomeClass {
+            number: arg.1
+        })
     }
 
     fn default_properties(builder: ClassBuilder<Self>) -> ClassBuilder<Self> {
         builder.with_method("easy", SomeClass::jsfunction)
                .with_method("easy2", SomeClass::jsother)
+               .with_method("real", SomeClass::real)
+               .with_method("real2", SomeClass::real2)
+               .with_method("none", SomeClass::none)
+               .with_method("other2", SomeClass::other2)
                .with_accessor("easy3", SomeClass::jsaccessor)
     }
 }
 
 impl SomeClass {
-    pub fn real(&self, a: String) {
+    pub fn none(&mut self) {
+        println!("coucou");
+    }
+    pub fn real(&mut self, a: String) {
         println!("coucou {}", a);
     }
-    pub fn real2(&self, a: (String, i64)) {
+    pub fn real2(&mut self, a: (String, i64)) {
         println!("coucou {:?}", a);
     }
-    pub fn other(&self, a: u64, b: u64) {
+    pub fn other(&mut self, a: u64, b: u64) {
         println!("coucou {} {}", a, b);
     }
 
-    pub fn jsfunction(&self, _args: (String, i64)) -> String {
+    pub fn other2(&mut self, a: i64, b: i64) {
+        println!("coucou {} {}", a, b);
+    }
+
+    pub fn jsfunction(&mut self, _s: String, _i: i64) -> String {
         println!("FROM JSFUNCTION {} {:x?}", self.number, self as *const SomeClass);
         "weeesh".to_owned()
     }
-    pub fn jsother(&self, _args: (String, i64)) -> i64 {
+    pub fn jsother(&mut self, _s: String, _i: i64) -> i64 {
         println!("FROM JSOTHER", );
         93
     }
-    pub fn jsaccessor(&self, _args: Option<String>) -> i64 {
+    pub fn jsaccessor(&mut self, _args: Option<String>) -> i64 {
         123456
     }
     pub fn jsbox(&self, _args: Option<String>) -> Box<i64> {

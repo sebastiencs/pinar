@@ -68,6 +68,7 @@
   const res_15 = a.test15({ a: 55 });
   console.log("15:", res_15, res_15.wesh("salut"));
   //console.log(a.test16((a) => console.log(`ARG:`, a)));
+  a.test17("seb", "salut", [1, 2, 3]);
 }
 
 // for (let i = 0; i < 100; i+= 1) {

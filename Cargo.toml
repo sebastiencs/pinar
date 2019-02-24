@@ -20,6 +20,7 @@ panic = "unwind"
 [features]
 default = ["pinar-serde"]
 
+nightly = []
 pinar-serde = ["serde", "serde_derive", "pinar-derive"]
 
 [dependencies]

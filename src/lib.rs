@@ -4,9 +4,12 @@
 //#![feature(tool_lints)]
 #![cfg_attr(
     feature = "nightly",
-    feature(core_intrinsics)
+    feature(core_intrinsics, unsized_locals)
 )]
 //#![feature(core_intrinsics)]
+#![feature(unsized_locals)]
+#![feature(default_type_parameter_fallback)]
+#![feature(specialization)]
 #![warn(
      clippy::all,
      clippy::cargo,
@@ -14,6 +17,8 @@
 //     clippy::pedantic,
 //     clippy::nursery,
 )]
+#![feature(unboxed_closures)]
+#![feature(fn_traits)]
 
 //use crate::arguments::{Arguments, FromArguments};
 use crate::error::ArgumentsError;
@@ -217,6 +222,17 @@ fn test15<'e>(obj: JsObject) -> JsObject {
 //     //fun();
 // }
 
+fn test17<'e>(s1: JsString, s2: JsString, vec: Vec<i64>) -> Result<()> {
+    println!("FIRST: {}", s1.to_rust()?);
+    println!("SECOND: {}", s2.to_rust()?);
+    println!("VEC: {:?}", vec);
+    Ok(())
+}
+
+fn test18() {
+    println!("OK");
+}
+
 /// Register the node module
 ///
 /// It takes a closure as parameter.
@@ -295,6 +311,8 @@ register_module!(|module: ModuleBuilder| {
           })
           .with_function("test15", test15)
 //          .with_function("test16", test16)
+          .with_function("test17", test17)
+          .with_function("test17", test18)
           .with_class("someclass", || {
               ClassBuilder::<SomeClass>::start_build()
                   .with_method("easy", SomeClass::jsfunction)

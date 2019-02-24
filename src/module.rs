@@ -165,6 +165,9 @@ where
     }
 }
 
+// TODO: Waiting for this to reach stable:
+// https://github.com/rust-lang/rust/pull/55986
+
 pub trait CallbackFn<A, R>
 where
     A: FromArguments,
