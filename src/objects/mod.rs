@@ -223,8 +223,9 @@ macro_rules! impl_jsref {
             }
 
             impl<'e> $jstype<'e> {
+                #[doc(hidden)]
                 #[inline]
-                pub(crate) fn from(value: Value) -> Self {
+                pub fn from(value: Value) -> Self {
                     Self { value, phantom: PhantomData }
                 }
 
