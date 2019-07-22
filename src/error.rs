@@ -59,7 +59,7 @@ pub(crate) enum JsFunctionError {
 }
 
 #[derive(Fail, Debug, Clone)]
-pub(crate) enum ArgumentsError {
+pub enum ArgumentsError {
     #[fail(display = "{}th argument is missing", _0)]
     Missing(usize),
     #[fail(display = "Wrong type, expected a {} on the {}th argument", _0, _1)]
