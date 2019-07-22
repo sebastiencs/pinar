@@ -78,24 +78,25 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
         execute_safely(env, || {
             let env = Env::from(env);
             let (class_data, args) = env.callback_info::<JsClassData<Self>>(cb_info)?;
-            let class_data = Rc::from_raw(class_data);
+            let mut class_data = Rc::from_raw(class_data);
+
+            let class = if class_data.args_rust.is_some() {
+                let args_rust = Rc::make_mut(&mut class_data).args_rust.take().expect("None value here");
+                Self::constructor(args_rust)?
+            } else {
+                Self::constructor(FromArguments::from_args(&args)?)?
+            };
 
             // 1 JsClassData for each JS instance, + 1 for the JS constructor
-            let mut copy_class_data = Rc::clone(&class_data);
+            let copy_class_data = Rc::clone(&class_data);
             std::mem::forget(class_data);
+
             let this = args.this()?.as_jsobject()
                                    .ok_or_else(|| ThisConstructor(C::CLASSNAME))?;
 
             if !(this.has_property(C::PINAR_CLASS_ID)?) {
                 return Err(ThisConstructor(C::CLASSNAME).into())
             }
-
-            let class = if copy_class_data.args_rust.is_some() {
-                let args_rust = Rc::make_mut(&mut copy_class_data).args_rust.take().unwrap();
-                Self::constructor(args_rust)?
-            } else {
-                Self::constructor(FromArguments::from_args(&args)?)?
-            };
 
             let class = Box::new(class);
 
