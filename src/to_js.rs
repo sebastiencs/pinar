@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::rc::Rc;
 use std::hash::BuildHasher;
+use std::path::PathBuf;
 use crate::prelude::*;
 use crate::Result;
 
@@ -53,6 +54,20 @@ impl<'e> ToJs<'e> for i64 {
     type Value = JsNumber<'e>;
     fn to_js(self, env: Env) -> Result<JsNumber<'e>> {
         env.number(self)
+    }
+}
+
+impl<'e> ToJs<'e> for bool {
+    type Value = JsBoolean<'e>;
+    fn to_js(self, env: Env) -> Result<JsBoolean<'e>> {
+        env.boolean(self)
+    }
+}
+
+impl<'e> ToJs<'e> for PathBuf {
+    type Value = JsString<'e>;
+    fn to_js(self, env: Env) -> Result<JsString<'e>> {
+        env.string(self.as_os_str().to_str().unwrap())
     }
 }
 
