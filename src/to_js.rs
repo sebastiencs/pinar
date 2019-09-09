@@ -89,6 +89,14 @@ where
         self.to_js_class(env)
     }
 }
+
+impl<'e, 'p> ToJs<'e> for &'p PathBuf {
+    type Value = JsString<'e>;
+    fn to_js(self, env: Env) -> Result<JsString<'e>> {
+        env.string(self.as_os_str().to_str().unwrap())
+    }
+}
+
 impl<'e, K, V, S> ToJs<'e> for HashMap<K, V, S>
 where
     K: Hash + Eq + KeyProperty + ToJs<'e>,

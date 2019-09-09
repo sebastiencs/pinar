@@ -3,6 +3,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::os::raw::c_char;
 use napi_sys::*;
+use std::path::PathBuf;
 use crate::prelude::*;
 use crate::Result;
 
@@ -28,6 +29,37 @@ impl<'e> ToRust<String> for JsString<'e>
             // It's probably safe to assume that it's valid ut8
             Ok(String::from_utf8_unchecked(buffer))
         }
+    }
+}
+
+// Refactor with String (above)
+impl<'e> ToRust<PathBuf> for JsString<'e>
+{
+    fn to_rust(&self) -> Result<PathBuf> {
+        let len = self.len()?;
+        let mut buffer: Vec<u8> = Vec::with_capacity(len + 1); // + '\0'
+        let mut written = 0usize;
+        unsafe {
+            Status::result(napi_get_value_string_utf8(
+                self.value.env(),
+                self.value.get(),
+                buffer.as_mut_ptr() as *mut c_char,
+                len + 1,
+                &mut written as *mut usize
+            ))?;
+            buffer.set_len(written);
+            // It's probably safe to assume that it's valid ut8
+            Ok(PathBuf::from(String::from_utf8_unchecked(buffer)))
+        }
+    }
+}
+
+use crate::error::ArgumentsError;
+
+impl<'e> ToRust<()> for JsString<'e>
+{
+    fn to_rust(&self) -> Result<()> {
+        Err(ArgumentsError::wrong_type("a", 1))
     }
 }
 

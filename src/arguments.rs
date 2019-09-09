@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::rc::Rc;
 use napi_sys::*;
 use std::cell::Cell;
+use std::path::PathBuf;
 
 use crate::error::ArgumentsError;
 use crate::Result;
@@ -193,6 +194,7 @@ from_args_js!(
     (i64, Number, "number (integer)"),
     (f64, Number, "number (double)"),
     (String, String, "string"),
+    (PathBuf, String, "string"),
     (bool, Boolean, "boolean"),
     (Box, External, "external (box)", T),
     (Rc, External, "external (rc)", T),
