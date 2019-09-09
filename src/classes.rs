@@ -17,7 +17,7 @@ pub trait JsClass : Sized + 'static {
     fn constructor(args: Self::ArgsConstructor) -> Result<Self> ;
 
     fn default_properties(builder: ClassBuilder<Self>) -> ClassBuilder<Self> { builder }
-    fn new_instance(env: &Env, args: Self::ArgsConstructor) -> Result<JsObject> {
+    fn new_instance<'e>(env: Env, args: Self::ArgsConstructor) -> Result<JsObject<'e>> {
         ClassBuilder::<Self>::new_instance(env, args)
     }
 }
@@ -83,6 +83,8 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
             let class = if class_data.args_rust.is_some() {
                 let args_rust = Rc::make_mut(&mut class_data).args_rust.take().expect("None value here");
                 Self::constructor(args_rust)?
+            } else if class_data.instance.is_some() {
+                Rc::make_mut(&mut class_data).instance.take().expect("Instance none")
             } else {
                 Self::constructor(FromArguments::from_args(&args)?)?
             };
@@ -163,7 +165,8 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
 struct JsClassData<C: JsClass> {
     id: TypeId,
     args_rust: Option<C::ArgsConstructor>,
-    methods: Vec<Rc<ClassMethodHandler<C>>>
+    methods: Vec<Rc<ClassMethodHandler<C>>>,
+    instance: Option<C>
 }
 
 // Implement Clone ourself because ArgsConstructor might not be clonable
@@ -172,7 +175,8 @@ impl<C: JsClass> Clone for JsClassData<C> {
         JsClassData {
             id: self.id,
             args_rust: None,
-            methods: self.methods.clone()
+            methods: self.methods.clone(),
+            instance: None
         }
     }
 }
@@ -250,7 +254,7 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
         self
     }
 
-    fn create_internal<'e>(&self, env: &Env, args_rust: Option<C::ArgsConstructor>) -> Result<JsFunction<'e>> {
+    fn create_internal<'e>(&self, env: &Env, args_rust: Option<C::ArgsConstructor>, instance: Option<C>) -> Result<JsFunction<'e>> {
         let mut props: Vec<_> = self.props.iter().enumerate().map(|(index, prop)| { napi_property_descriptor {
             utf8name: prop.name.as_ptr() as *const i8,
             name: std::ptr::null_mut(),
@@ -284,7 +288,8 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
         let data_ptr = Rc::into_raw(Rc::new(JsClassData {
             id: TypeId::of::<C>(),
             methods: data,
-            args_rust
+            args_rust,
+            instance
         }));
 
         let mut result = Value::new(*env);
@@ -312,12 +317,18 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
     }
 
     pub fn create<'e>(&self, env: &Env) -> Result<JsFunction<'e>> {
-        self.create_internal(env, None)
+        self.create_internal(env, None, None)
     }
 
-    pub fn new_instance<'e>(env: &Env, args: C::ArgsConstructor) -> Result<JsObject<'e>> {
+    pub fn new_instance<'e>(env: Env, args: C::ArgsConstructor) -> Result<JsObject<'e>> {
         let builder = ClassBuilder::<C>::default();
-        let fun = builder.create_internal(env, Some(args))?;
+        let fun = builder.create_internal(&env, Some(args), None)?;
+        fun.new_instance(())
+    }
+
+    pub fn from_instance<'e>(env: Env, instance: C) -> Result<JsObject<'e>> {
+        let builder = ClassBuilder::<C>::default();
+        let fun = builder.create_internal(&env, None, Some(instance))?;
         fun.new_instance(())
     }
 }
