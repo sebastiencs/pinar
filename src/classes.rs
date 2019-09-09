@@ -435,6 +435,17 @@ where
     }
 }
 
+pub struct AsJsClass<C: JsClass>(pub C);
+
+impl<C> AsJsClass<C>
+where
+     C: JsClass
+{
+    pub(crate) fn to_js_class<'e>(self, env: Env) -> Result<JsObject<'e>> {
+        ClassBuilder::from_instance(env, self.0)
+    }
+}
+
 impl JsClass for SomeClass {
     const CLASSNAME: &'static str = "RustClass";
     type ArgsConstructor = (String, i64);

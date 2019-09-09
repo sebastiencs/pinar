@@ -78,6 +78,17 @@ impl<'e> ToJs<'e> for String {
     }
 }
 
+use crate::classes::AsJsClass;
+
+impl<'e, C> ToJs<'e> for AsJsClass<C>
+where
+    C: JsClass
+{
+    type Value = JsObject<'e>;
+    fn to_js(self, env: Env) -> Result<JsObject<'e>> {
+        self.to_js_class(env)
+    }
+}
 impl<'e, K, V, S> ToJs<'e> for HashMap<K, V, S>
 where
     K: Hash + Eq + KeyProperty + ToJs<'e>,
