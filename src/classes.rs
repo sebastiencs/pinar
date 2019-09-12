@@ -14,9 +14,13 @@ pub trait JsClass : Sized + 'static {
     const CLASSNAME: &'static str;
     type ArgsConstructor: FromArguments;
 
-    fn constructor(args: Self::ArgsConstructor) -> Result<Self> ;
+    fn constructor(args: Self::ArgsConstructor) -> Result<Self> {
+        Err(JsClassError::NoConstructor(Self::CLASSNAME).into())
+    }
 
-    fn default_properties(builder: ClassBuilder<Self>) -> ClassBuilder<Self> { builder }
+    fn default_properties(builder: ClassBuilder<Self>) -> ClassBuilder<Self> {
+        builder
+    }
     fn new_instance<'e>(env: Env, args: Self::ArgsConstructor) -> Result<JsObject<'e>> {
         ClassBuilder::<Self>::new_instance(env, args)
     }
@@ -228,10 +232,6 @@ impl<C: JsClass> Default for ClassBuilder<C> {
 }
 
 impl<C: JsClass + 'static> ClassBuilder<C> {
-    pub fn start_build() -> Self {
-        Default::default()
-    }
-
     pub fn with_method<S, A, R, Method>(mut self, name: S, method: Method) -> Self
     where
         S: AsRef<str>,
@@ -254,7 +254,13 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
         self
     }
 
-    fn create_internal<'e>(&self, env: &Env, args_rust: Option<C::ArgsConstructor>, instance: Option<C>) -> Result<JsFunction<'e>> {
+    fn create_internal<'e>(
+        &self,
+        env: &Env,
+        args_rust: Option<C::ArgsConstructor>,
+        instance: Option<C>
+    ) -> Result<JsFunction<'e>>
+    {
         let mut props: Vec<_> = self.props.iter().enumerate().map(|(index, prop)| { napi_property_descriptor {
             utf8name: prop.name.as_ptr() as *const i8,
             name: std::ptr::null_mut(),
@@ -450,21 +456,22 @@ impl JsClass for SomeClass {
     const CLASSNAME: &'static str = "RustClass";
     type ArgsConstructor = (String, i64);
 
-    fn constructor(arg: Self::ArgsConstructor) -> Result<Self> {
-        Ok(SomeClass {
-            number: arg.1
-        })
-    }
+    // fn constructor(arg: Self::ArgsConstructor) -> Result<Self> {
+    //     Ok(SomeClass {
+    //         number: arg.1
+    //     })
+    // }
 
-    fn default_properties(builder: ClassBuilder<Self>) -> ClassBuilder<Self> {
-        builder.with_method("easy", SomeClass::jsfunction)
-               .with_method("easy2", SomeClass::jsother)
-               .with_method("real", SomeClass::real)
-               .with_method("real2", SomeClass::real2)
-               .with_method("none", SomeClass::none)
-               .with_method("other2", SomeClass::other2)
-               .with_accessor("easy3", SomeClass::jsaccessor)
-    }
+    // fn default_properties(builder: ClassBuilder<Self>) -> ClassBuilder<Self> {
+    //     builder.with_method("easy", SomeClass::jsfunction)
+    //            .with_method("easy2", SomeClass::jsother)
+    //            .with_method("real", SomeClass::real)
+    //            .with_method("real2", SomeClass::real2)
+    //            .with_method("none", SomeClass::none)
+    //            .with_method("other2", SomeClass::other2)
+    //            .with_method("obj", SomeClass::obj)
+    //            .with_accessor("easy3", SomeClass::jsaccessor)
+    // }
 }
 
 impl SomeClass {
@@ -483,6 +490,10 @@ impl SomeClass {
 
     pub fn other2(&mut self, a: i64, b: i64) {
         println!("coucou {} {}", a, b);
+    }
+
+    pub fn obj<'e>(&mut self, env: Env) -> JsBoolean<'e> {
+        env.boolean(true).unwrap()
     }
 
     pub fn jsfunction(&mut self, _s: String, _i: i64) -> String {
@@ -504,8 +515,8 @@ impl SomeClass {
 fn test(env: Env) -> Result<()> {
     //    ClassBuilder::<SomeClass>::start_build();
 
-    SomeClass::new_instance(&env, (String::from("seb"), 2))?;
+    SomeClass::new_instance(env, (String::from("seb"), 2))?;
 
-    let _class = ClassBuilder::<SomeClass>::new_instance(&env, (String::from("seb"), 2))?;
+    let _class = ClassBuilder::<SomeClass>::new_instance(env, (String::from("seb"), 2))?;
     Ok(())
 }

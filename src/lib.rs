@@ -86,16 +86,36 @@ pub mod prelude {
     pub use crate::jsreturn::JsReturn;
     //pub use crate::module::__pinar_dispatch_function;
     pub use crate::arguments::{FromArguments, Arguments};
-    pub use crate::classes::{JsClass, ClassBuilder};
+    pub use crate::classes::{JsClass, AsJsClass, ClassBuilder};
     pub use crate::JsResult;
     #[cfg(feature = "pinar-serde")]
     pub use crate::pinar_serde::ser::serialize_to_js;
     #[cfg(feature = "pinar-serde")]
-    pub use pinar_derive::{ToJs, FromArguments};
+    pub use pinar_derive::{ToJs, FromArguments, export};
+    // #[cfg(feature = "pinar-serde")]
+    // pub use pinar_derive;
+    // #[cfg(feature = "pinar-serde")]
+    // pub use serde::{Serialize, Deserialize};
+    // pub use super::register_module;
+    #[doc(hidden)]
+    pub use napi_sys::{napi_env, napi_value};
+    pub use crate::error::ArgumentsError;
+
+    pub use linkme::distributed_slice;
+    pub use linkme;
 }
 
+pub use pinar_derive::{export, setter, getter, constructor, exportfn};
 
 use crate::pinar_serde::ser::serialize_to_js;
+
+use linkme::distributed_slice;
+
+#[distributed_slice]
+pub static PINAR_CLASSES: [fn(&mut ModuleBuilder)] = [..];
+
+#[distributed_slice]
+pub static PINAR_FUNCTIONS: [fn(&mut ModuleBuilder)] = [..];
 
 fn testfn(fun: JsFunction) {
     fun.call((1, "seb")).ok();
@@ -233,92 +253,74 @@ fn test18() {
     println!("OK");
 }
 
-/// Register the node module
-///
-/// It takes a closure as parameter.
-/// The closure takes a [`ModuleBuilder`] as argument
-/// and returns a [`JsObject`] describing the module
-///
-/// # Example:
-/// ```rust, no_run
-/// register_module!(|module: ModuleBuilder| {
-///     module.with_function("my_function1", my_fn1)
-///           .with_function("my_function2", my_fn2)
-///           .with_class("my_class", || {
-///               ClassBuilder::<SomeClass>::start_build()
-///                   .with_method("easy", SomeClass::jsfunction)
-///                   .with_accessor("easy3", SomeClass::jsaccessor)
-///           })
-///           .build()
-/// });
-/// ```
-#[macro_export]
-macro_rules! register_module {
-    ($init:expr) => {
-        #[doc(hidden)]
-        #[no_mangle]
-        #[cfg_attr(target_os = "linux", link_section = ".ctors")]
-        #[cfg_attr(target_os = "macos", link_section = "__DATA,__mod_init_func")]
-        #[cfg_attr(target_os = "windows", link_section = ".CRT$XCU")]
-        pub static __REGISTER_MODULE: extern "C" fn() = {
-            use napi_sys::*;
+#[doc(hidden)]
+#[no_mangle]
+#[cfg_attr(target_os = "linux", link_section = ".ctors")]
+#[cfg_attr(target_os = "macos", link_section = "__DATA,__mod_init_func")]
+#[cfg_attr(target_os = "windows", link_section = ".CRT$XCU")]
+pub static PINAR_REGISTER: extern "C" fn() = __pinar_register;
 
-            extern "C" fn register_module() {
-                static mut MODULE_DESCRIPTOR: napi_module = napi_module {
-                    nm_version: 1,
-                    nm_flags: 0,
-                    nm_filename: std::ptr::null(),
-                    nm_modname: std::ptr::null(),
-                    nm_register_func: Some(init_module),
-                    nm_priv: 0 as *mut _,
-                    reserved: [0 as *mut _; 4],
-                };
+extern "C" fn __pinar_register() {
+    use napi_sys::*;
 
-                unsafe { napi_module_register(&mut MODULE_DESCRIPTOR) };
-
-                extern "C" fn init_module(env: napi_env, export: napi_value) -> napi_value {
-                    match $init(ModuleBuilder::new(env, export)) {
-                        Ok(export) => export,
-                        _ => unreachable!()
-                    }
-                }
-            }
-
-            register_module
-        };
+    static mut MODULE_DESCRIPTOR: napi_module = napi_module {
+        nm_version: 1,
+        nm_flags: 0,
+        nm_filename: std::ptr::null(),
+        nm_modname: std::ptr::null(),
+        nm_register_func: Some(init_module),
+        nm_priv: 0 as *mut _,
+        reserved: [0 as *mut _; 4],
     };
+
+    unsafe { napi_module_register(&mut MODULE_DESCRIPTOR) };
+
+    extern "C" fn init_module(env: napi_env, export: napi_value) -> napi_value {
+        let mut builder = ModuleBuilder::new(env, export);
+
+        for initializer in PINAR_CLASSES {
+            initializer(&mut builder);
+        }
+
+        for initializer in PINAR_FUNCTIONS {
+            initializer(&mut builder);
+        }
+
+        builder.build().expect("ModuleBuilder")
+    }
 }
 
-use crate::classes::SomeClass;
+
+//use crate::classes::SomeClass;
 //use crate::classes::ClassBuilder;
 
-register_module!(|module: ModuleBuilder| {
-    module.with_function("test1", test1)
-          .with_function("my_super_function", test2)
-          .with_function("my_other_function", test3)
-          .with_function("test4", test4)
-          .with_function("test5", test5)
-          .with_function("test6", test6)
-          .with_function("test7", test7)
-          .with_function("test8", test8)
-          .with_function("test9", test9)
-          .with_function("test10", test10)
-          .with_function("test11", test11)
-          .with_function("test12", test12)
-          .with_function("test13", test13)
-          .with_function("test14", |()| {
-              1234
-          })
-          .with_function("test15", test15)
-//          .with_function("test16", test16)
-          .with_function("test17", test17)
-          .with_function("test17", test18)
-          .with_class("someclass", || {
-              ClassBuilder::<SomeClass>::start_build()
-                  .with_method("easy", SomeClass::jsfunction)
-                  .with_method("easy2", SomeClass::jsother)
-                  .with_accessor("easy3", SomeClass::jsaccessor)
-                  // .with_accessor("easy4", SomeClass::jsbox)
-          })
-          .build()
-});
+// register_module!(|module: ModuleBuilder| {
+//     module.with_function("test1", test1)
+//           .with_function("my_super_function", test2)
+//           .with_function("my_other_function", test3)
+//           .with_function("test4", test4)
+//           .with_function("test5", test5)
+//           .with_function("test6", test6)
+//           .with_function("test7", test7)
+//           .with_function("test8", test8)
+//           .with_function("test9", test9)
+//           .with_function("test10", test10)
+//           .with_function("test11", test11)
+//           .with_function("test12", test12)
+//           .with_function("test13", test13)
+//           .with_function("test14", |()| {
+//               1234
+//           })
+//           .with_function("test15", test15)
+// //          .with_function("test16", test16)
+//           .with_function("test17", test17)
+//           .with_function("test17", test18)
+//           .with_class("someclass", || {
+//               ClassBuilder::<SomeClass>::start_build()
+//                   .with_method("easy", SomeClass::jsfunction)
+//                   .with_method("easy2", SomeClass::jsother)
+//                   .with_accessor("easy3", SomeClass::jsaccessor)
+//                   // .with_accessor("easy4", SomeClass::jsbox)
+//           })
+//           .build()
+// });

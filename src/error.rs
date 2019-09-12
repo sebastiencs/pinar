@@ -44,6 +44,8 @@ pub(crate) enum JsClassError {
     ThisConstructor(&'static str),
     #[fail(display = "Wrong 'this' value on a method call of the class {}", _0)]
     ThisMethod(&'static str),
+    #[fail(display = "Constructor of the class {} is not defined", _0)]
+    NoConstructor(&'static str),
     #[fail(display = "Fail to unwrap the class. Please report on pinar repo.")]
     Unwrap,
 }

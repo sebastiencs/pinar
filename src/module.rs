@@ -17,7 +17,7 @@ pub struct ModuleBuilder<'e>
     env: Env,
     export: JsObject<'e>,
     functions: HashMap<String, ModuleFunction>,
-    classes: Vec<(String, JsFunction<'e>)>
+    classes: Vec<(&'static str, JsFunction<'e>)>
 }
 
 pub(crate) struct ModuleFunction {
@@ -52,7 +52,7 @@ impl<'e> ModuleBuilder<'e> {
         }
     }
 
-    pub fn with_function<S, Fun, Args, R>(mut self, name: S, fun: Fun) -> Self
+    pub fn with_function<S, Fun, Args, R>(&mut self, name: S, fun: Fun)
     where
         S: Into<String>,
         Fun: CallbackFn<Args, R> + 'static,
@@ -68,13 +68,13 @@ impl<'e> ModuleBuilder<'e> {
                 funs.insert(ModuleFunction::new(name, fun));
             }
         };
-        self
     }
 
-    pub fn with_class<C: 'static +  JsClass>(mut self, name: impl Into<String>, fun: impl Fn() -> ClassBuilder<C>) -> Self {
-        let fun = fun().create(&self.env).unwrap();
-        self.classes.push((name.into(), fun));
-        self
+    pub fn with_class<C: 'static +  JsClass>(&mut self) {
+        self.classes.push((
+            C::CLASSNAME,
+            ClassBuilder::<C>::default().create(&self.env).unwrap()
+        ));
     }
 
     pub fn build(self) -> Result<napi_value> {
