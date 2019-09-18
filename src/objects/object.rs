@@ -29,6 +29,24 @@ impl<'e> JsObject<'e> {
         Ok(())
     }
 
+    pub(crate) fn set_ref<K, V>(&self, key: &K, value: &V) -> Result<()>
+    where
+        K: KeyProperty + ToJs<'e>,
+        V: ToJs<'e>
+    {
+        let key = key.to_js(self.value.env)?.get_value();
+        let value = value.to_js(self.value.env)?.get_value();
+        unsafe {
+            Status::result(napi_set_property(
+                self.value.env(),
+                self.value.get(),
+                key.get(),
+                value.get()
+            ))?;
+        };
+        Ok(())
+    }
+
     pub fn get<K>(&self, key: K) -> Result<JsAny<'e>>
     where
         K: KeyProperty + ToJs<'e>

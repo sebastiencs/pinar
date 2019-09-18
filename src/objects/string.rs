@@ -26,3 +26,10 @@ impl<'e> JsString<'e> {
         }
     }
 }
+
+impl<'e> std::fmt::Display for JsString<'e> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s: String = self.to_rust().map_err(|_| std::fmt::Error)?;
+        write!(f, "{}", s)
+    }
+}

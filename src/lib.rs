@@ -103,9 +103,12 @@ pub mod prelude {
 
     pub use linkme::distributed_slice;
     pub use linkme;
+
+    pub use super::{PINAR_CLASSES,PINAR_FUNCTIONS};
+    pub use pinar_derive::pinar;
+    pub use super::pinar_serde;
 }
 
-pub use pinar_derive::{export, setter, getter, constructor, exportfn};
 
 use crate::pinar_serde::ser::serialize_to_js;
 

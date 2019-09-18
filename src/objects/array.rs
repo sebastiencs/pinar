@@ -50,6 +50,22 @@ impl<'e> JsArray<'e> {
         Ok(())
     }
 
+    pub fn set_ref<V>(&self, index: u32, value: &V) -> Result<()>
+    where
+        V: ToJs<'e>
+    {
+        let value = value.to_js(self.value.env)?.get_value();
+        unsafe {
+            Status::result(napi_set_element(
+                self.value.env(),
+                self.value.get(),
+                index,
+                value.get()
+            ))?;
+        };
+        Ok(())
+    }
+
     pub fn get(&self, index: u32) -> Result<JsAny<'e>> {
         let mut value = Value::new(self.value.env);
         unsafe {

@@ -196,59 +196,20 @@ impl<'e> JsValue for JsAny<'e> {
     }
 }
 
-macro_rules! impl_jsref {
-    (
-        $( $jstype:ident ),*
-    ) => {
-        $(
-            impl<'e> JsRef<$jstype<'e>> {
-                pub fn get(&self) -> Result<$jstype<'e>> {
-                    let mut result = Value::new(self.env);
-                    unsafe {
-                        Status::result(napi_get_reference_value(
-                            self.env.env(),
-                            self.js_ref,
-                            result.get_mut()
-                        ))?;
-                    }
-                    Ok($jstype::from(result))
-                }
-            }
-
-            impl<'e> JsValue for $jstype<'e> {
-                #[inline]
-                fn get_value(&self) -> Value {
-                    self.value
-                }
-            }
-
-            impl<'e> $jstype<'e> {
-                #[doc(hidden)]
-                #[inline]
-                pub fn from(value: Value) -> Self {
-                    Self { value, phantom: PhantomData }
-                }
-
-                #[inline]
-                pub(crate) fn clone(&self) -> Self {
-                    Self { value: self.value, phantom: PhantomData }
-                }
-            }
-
-        )*
+impl<'e> JsValue for &JsAny<'e> {
+    fn get_value(&self) -> Value {
+        match self {
+            JsAny::String(s) => s.value,
+            JsAny::Object(s) => s.value,
+            JsAny::Array(s) => s.value,
+            JsAny::Number(s) => s.value,
+            JsAny::Symbol(s) => s.value,
+            JsAny::External(s) => s.value,
+            JsAny::Function(s) => s.value,
+            JsAny::Undefined(s) => s.value,
+            JsAny::Null(s) => s.value,
+            JsAny::Boolean(s) => s.value,
+            JsAny::BigInt(s) => s.value,
+        }
     }
 }
-
-impl_jsref!(
-    JsString,
-    JsObject,
-    JsArray,
-    JsNumber,
-    JsSymbol,
-    JsUndefined,
-    JsFunction,
-    JsExternal,
-    JsNull,
-    JsBoolean,
-    JsBigInt
-);

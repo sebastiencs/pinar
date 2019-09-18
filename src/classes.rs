@@ -447,8 +447,8 @@ impl<C> AsJsClass<C>
 where
      C: JsClass
 {
-    pub(crate) fn to_js_class<'e>(self, env: Env) -> Result<JsObject<'e>> {
-        ClassBuilder::from_instance(env, self.0)
+    pub(crate) fn to_js_class<'e>(self, env: Env) -> Result<Value> {
+        ClassBuilder::from_instance(env, self.0).map(|c| c.get_value())
     }
 }
 
