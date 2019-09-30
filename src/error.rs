@@ -70,6 +70,12 @@ pub enum ArgumentsError {
     Deserialization(String)
 }
 
+#[derive(Fail, Debug, Clone)]
+pub enum JsAnyError {
+    #[fail(display = "Wrong conversion from a JsAny")]
+    WrongAny,
+}
+
 impl ArgumentsError {
     pub fn wrong_type(s: &str, n: usize) -> Error {
         ArgumentsError::WrongType(s.to_owned(), n).into()
@@ -136,6 +142,12 @@ impl JsError for JsClassError {
 }
 
 impl JsError for JsFunctionError {
+    fn get_code(&self) -> Option<String> {
+        Some("PINAR".to_owned())
+    }
+}
+
+impl JsError for JsAnyError {
     fn get_code(&self) -> Option<String> {
         Some("PINAR".to_owned())
     }
