@@ -163,3 +163,22 @@ impl<'e, T: 'static> ToRust<Option<Box<T>>> for JsExternal<'e> {
         self.take_box()
     }
 }
+
+use serde::de::DeserializeOwned;
+
+impl<'e, T> ToRust<Vec<T>> for JsArray<'e>
+where
+    T: DeserializeOwned
+{
+    fn to_rust(&self) -> Result<Vec<T>> {
+        let env = self.env();
+        let mut vec = Vec::with_capacity(self.len()?);
+        for elem in self.iter()? {
+            let elem: Result<_> = pinar_serde::de::from_any::<T>(env, elem).map_err(|e| {
+                ArgumentsError::Deserialization(format!("{}", e)).into()
+            });
+            vec.push(elem?);
+        }
+        Ok(vec)
+    }
+}
