@@ -6,6 +6,7 @@ use crate::Result;
 use crate::status::Status;
 use crate::value::ValueType;
 use crate::to_rust::ToRust;
+use crate::error::JsAnyError;
 
 mod array;
 mod external;
@@ -74,6 +75,32 @@ pub enum JsAny<'e> {
     BigInt(JsBigInt<'e>),
 }
 
+
+impl<'e> std::fmt::Debug for JsAny<'e> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let inner = match self {
+            JsAny::String(s) => {
+                // let s = s.to_string().as_str();
+                // &s
+                &"String"
+            }
+            JsAny::Object(s) => { &"Object" }
+            JsAny::Array(s) => { &"Array" }
+            JsAny::Number(s) => { &"Number" }
+            JsAny::Symbol(s) => { &"Symbol" }
+            JsAny::External(s) => { &"External" }
+            JsAny::Function(s) => { &"Function" }
+            JsAny::Undefined(s) => { &"Undefined" }
+            JsAny::Null(s) => { &"Null" }
+            JsAny::Boolean(s) => { &"Boolean" }
+            JsAny::BigInt(s) => { &"BigInt" }
+        };
+        f.debug_struct("JsAny")
+         .field("inner", inner)
+         .finish()
+    }
+}
+
 macro_rules! impl_jsany {
     (
         RUST_TYPES:
@@ -81,16 +108,16 @@ macro_rules! impl_jsany {
         JS_TYPES:
         $( ($fn_name:ident, $jstype:ident, $any:ident) ),*,
     ) => {
-        $(pub fn $fn_name(&self) -> Option<$jstype<'e>> {
+        $(pub fn $fn_name(&self) -> Result<$jstype<'e>> {
             match self {
-                JsAny::$any(s) => Some(s.clone()),
-                _ => None
+                JsAny::$any(s) => Ok(s.clone()),
+                _ => Err(JsAnyError::WrongAny.into())
             }
         })*
-        $(pub fn $rfn_name(&self) -> Option<$rtype> {
+        $(pub fn $rfn_name(&self) -> Result<$rtype> {
             match self {
-                JsAny::$rany(s) => s.to_rust().ok(),
-                _ => None
+                JsAny::$rany(s) => s.to_rust(),
+                _ => Err(JsAnyError::WrongAny.into())
             }
         })*
     }
