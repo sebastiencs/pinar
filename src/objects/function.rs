@@ -1,7 +1,7 @@
 
 use std::marker::PhantomData;
 use crate::prelude::*;
-use crate::function_threadsafe::JsFunctionThreadSafe;
+use crate::function_threadsafe::{JsFunctionThreadSafe, DataThreadSafe};
 use crate::*;
 
 pub struct JsFunction<'e> {
@@ -53,28 +53,43 @@ impl<'e> JsFunction<'e> {
         Ok(JsObject::from(result))
     }
 
-    pub fn make_threadsafe<T: MultiJs>(&self) -> Result<JsFunctionThreadSafe<T>> {
+    pub fn make_threadsafe<T: MultiJs, R: DeserializeOwned>(&self) -> Result<JsFunctionThreadSafe<T, R>> {
         let mut result: napi_threadsafe_function = std::ptr::null_mut();
+
+        let resource_name = "rust_threadsafe_function".to_js(self.value.env)?;
+
         unsafe {
             Status::result(napi_create_threadsafe_function(
                 self.value.env(),
                 self.value.get(),
                 std::ptr::null_mut(),
-                std::ptr::null_mut(),
+                resource_name.get_value().get(),
+//                std::ptr::null_mut(),
                 0,
                 1,
                 std::ptr::null_mut(),
                 None,
                 std::ptr::null_mut(),
-                Some(__pinar_threadsafe_function::<T>),
+                Some(__pinar_threadsafe_function::<T, R>),
                 &mut result
             ))?;
         }
-        Ok(JsFunctionThreadSafe::<T>::new(result))
+        Ok(JsFunctionThreadSafe::<T, R>::new(result))
     }
 }
 
-unsafe extern "C" fn __pinar_threadsafe_function<T: MultiJs>(
+use serde::de::DeserializeOwned;
+use crate::pinar_serde::de::from_any;
+
+fn display_exception(env: Env) {
+    let mut result = Value::new(env);
+    unsafe {
+        napi_get_and_clear_last_exception(env.env(), result.get_mut());
+    }
+    env.error(("An exception occured with a threadsafe function:\n", result));
+}
+
+unsafe extern "C" fn __pinar_threadsafe_function<T: MultiJs, R: DeserializeOwned>(
     env: napi_env,
     js_callback: napi_value,
     _context: *mut ::std::os::raw::c_void,
@@ -83,7 +98,25 @@ unsafe extern "C" fn __pinar_threadsafe_function<T: MultiJs>(
     if !env.is_null() && !js_callback.is_null() {
         let env = Env::from(env);
         let fun = JsFunction::from(Value::from(env, js_callback));
-        let args: Box<T> = Box::from_raw(data as *mut T);
-        fun.call(*args).ok();
+        let mut data: Box<DataThreadSafe<T, R>> = Box::from_raw(data as *mut DataThreadSafe<T, R>);
+        let args = data.args;
+
+        let result = match fun.call(*args) {
+            Ok(result) => result,
+            Err(e) => {
+                if let Some(Status::PendingException) = e.downcast_ref::<Status>() {
+                    display_exception(env);
+                };
+                panic!("Threadsafe functions throwing exception is not supported with Pinar");
+            }
+        };
+
+        if let Some(sender) = data.send_result.take() {
+            let result: R = match from_any(env, result) {
+                Ok(result) => result,
+                Err(e) => panic!("An error occured while deserializing result of a threadsafe function: {:?}", e)
+            };
+            sender.send(result).unwrap()
+        };
     }
 }
