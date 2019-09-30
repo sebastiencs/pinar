@@ -14,6 +14,7 @@ use crate::classes::__pinar_drop_box;
 use std::ffi::c_void;
 use napi_sys::*;
 use std::ffi::CString;
+use crate::multi_js::MultiJs;
 
 use crate::{
     JsString,
@@ -42,6 +43,28 @@ impl Env {
 
     pub(crate) fn from(env: napi_env) -> Env {
         Env { env }
+    }
+
+    pub fn log<'e>(&self, args: impl MultiJs) -> Result<()> {
+        let log = self.global()?
+                      .get("console")?
+                      .as_jsobject()?
+                      .get("log")?
+                      .as_jsfunction()?;
+
+        log.call(args)?;
+        Ok(())
+    }
+
+    pub fn error<'e>(&self, args: impl MultiJs) -> Result<()> {
+        let error = self.global()?
+                        .get("console")?
+                        .as_jsobject()?
+                        .get("error")?
+                        .as_jsfunction()?;
+
+        error.call(args)?;
+        Ok(())
     }
 
     pub fn boolean<'e>(&self, b: bool) -> Result<JsBoolean<'e>> {
