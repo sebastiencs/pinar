@@ -65,6 +65,14 @@ where
     T::deserialize(de)
 }
 
+pub fn from_value<T>(env: Env, value: Value) -> Result<T>
+where
+    T: DeserializeOwned + ?Sized,
+{
+    let de: Deserializer = Deserializer::new(env, JsAny::from(value)?);
+    T::deserialize(de)
+}
+
 #[doc(hidden)]
 pub struct Deserializer<'e> {
     env: Env,
@@ -87,10 +95,10 @@ impl<'e, 'de> serde::de::Deserializer<'de> for Deserializer<'e> {
         V: Visitor<'de>,
     {
         match self.input {
-            JsAny::String(s) => visitor.visit_string(s.to_rust().unwrap()),
+            JsAny::String(s) => visitor.visit_string(s.to_rust()?),
             JsAny::Undefined(_) => visitor.visit_unit(),
             JsAny::Null(_) => visitor.visit_unit(),
-            JsAny::Boolean(b) => visitor.visit_bool(b.to_rust().unwrap()),
+            JsAny::Boolean(b) => visitor.visit_bool(b.to_rust()?),
             JsAny::Object(o) => {
                 let mut deserializer = JsObjectAccess::new(self.env, o)?;
                 visitor.visit_map(&mut deserializer)
@@ -100,7 +108,7 @@ impl<'e, 'de> serde::de::Deserializer<'de> for Deserializer<'e> {
                 visitor.visit_seq(&mut deserializer)
             },
             JsAny::Number(n) => {
-                visitor.visit_i64(n.to_rust().unwrap())
+                visitor.visit_i64(n.to_rust()?)
             },
             JsAny::Symbol(_) => unimplemented!(),
             JsAny::External(_) => unimplemented!(),
