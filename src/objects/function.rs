@@ -24,16 +24,16 @@ impl<'e> JsFunction<'e> {
                                .collect();
         let mut result = Value::new(self.value.env);
         let this = this.to_js(self.value.env)?;
-        unsafe {
-            Status::result(napi_call_function(
-                self.value.env(),
-                this.get_value().value,
-                self.value.get(),
-                args.len(),
-                args.as_ptr(),
-                result.get_mut()
-            ))?;
-        };
+
+        napi_call!(napi_call_function(
+            self.value.env(),
+            this.get_value().value,
+            self.value.get(),
+            args.len(),
+            args.as_ptr(),
+            result.get_mut()
+        ))?;
+
         JsAny::from(result)
     }
 
@@ -43,15 +43,15 @@ impl<'e> JsFunction<'e> {
                                .map(|v| v.value)
                                .collect();
         let mut result = Value::new(self.value.env);
-        unsafe {
-            Status::result(napi_new_instance(
-                self.value.env(),
-                self.value.get(),
-                args.len(),
-                args.as_ptr(),
-                result.get_mut()
-            ))?;
-        }
+
+        napi_call!(napi_new_instance(
+            self.value.env(),
+            self.value.get(),
+            args.len(),
+            args.as_ptr(),
+            result.get_mut()
+        ))?;
+
         Ok(JsObject::from(result))
     }
 

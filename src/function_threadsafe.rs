@@ -140,41 +140,7 @@ fn display_exception(env: Env) {
     env.error(("An exception occured with a threadsafe function:\n", result));
 }
 
-#[inline(always)]
-fn threadsafe_callback<T, R>(
-    env: napi_env,
-    js_callback: napi_value,
-    data: *mut ::std::os::raw::c_void,
-)
-where
-    T: MultiJs + 'static,
-    R: DeserializeOwned,
-{
-    let env = Env::from(env);
-    let fun = JsFunction::from(Value::from(env, js_callback));
-    let mut data: Box<DataThreadSafe<T, R>> = unsafe { Box::from_raw(data as *mut DataThreadSafe<T, R>) };
-    let args = data.args;
-
-    let result = match fun.call(*args) {
-        Ok(result) => result,
-        Err(e) => {
-            if let Some(Status::PendingException) = e.downcast_ref::<Status>() {
-                display_exception(env);
-            };
-            panic!("Threadsafe functions throwing exception is not supported with Pinar");
-        }
-    };
-
-    if let Some(sender) = data.send_result.take() {
-        let result: R = match from_any(env, result) {
-            Ok(result) => result,
-            Err(e) => panic!("An error occured while deserializing result of a threadsafe function: {:?}", e)
-        };
-        sender.send(result).unwrap()
-    };
-}
-
-unsafe extern "C" fn __pinar_threadsafe_function<T, R>(
+extern "C" fn __pinar_threadsafe_function<T, R>(
     env: napi_env,
     js_callback: napi_value,
     _context: *mut ::std::os::raw::c_void,
@@ -185,6 +151,27 @@ where
     R: DeserializeOwned,
 {
     if !env.is_null() && !js_callback.is_null() {
-        threadsafe_callback::<T, R>(env, js_callback, data);
+        let env = Env::from(env);
+        let fun = JsFunction::from(Value::from(env, js_callback));
+        let mut data: Box<DataThreadSafe<T, R>> = unsafe { Box::from_raw(data as *mut DataThreadSafe<T, R>) };
+        let args = data.args;
+
+        let result = match fun.call(*args) {
+            Ok(result) => result,
+            Err(e) => {
+                if let Some(Status::PendingException) = e.downcast_ref::<Status>() {
+                    display_exception(env);
+                };
+                panic!("Threadsafe functions throwing exception is not supported with Pinar");
+            }
+        };
+
+        if let Some(sender) = data.send_result.take() {
+            let result: R = match from_any(env, result) {
+                Ok(result) => result,
+                Err(e) => panic!("An error occured while deserializing result of a threadsafe function: {:?}", e)
+            };
+            sender.send(result).unwrap()
+        };
     }
 }

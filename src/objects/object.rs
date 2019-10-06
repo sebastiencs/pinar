@@ -18,14 +18,14 @@ impl<'e> JsObject<'e> {
     {
         let key = key.to_js(self.value.env)?.get_value();
         let value = value.to_js(self.value.env)?.get_value();
-        unsafe {
-            Status::result(napi_set_property(
-                self.value.env(),
-                self.value.get(),
-                key.get(),
-                value.get()
-            ))?;
-        };
+
+        napi_call!(napi_set_property(
+            self.value.env(),
+            self.value.get(),
+            key.get(),
+            value.get()
+        ))?;
+
         Ok(())
     }
 
@@ -36,14 +36,14 @@ impl<'e> JsObject<'e> {
     {
         let key = key.to_js(self.value.env)?.get_value();
         let value = value.to_js(self.value.env)?.get_value();
-        unsafe {
-            Status::result(napi_set_property(
-                self.value.env(),
-                self.value.get(),
-                key.get(),
-                value.get()
-            ))?;
-        };
+
+        napi_call!(napi_set_property(
+            self.value.env(),
+            self.value.get(),
+            key.get(),
+            value.get()
+        ))?;
+
         Ok(())
     }
 
@@ -53,39 +53,39 @@ impl<'e> JsObject<'e> {
     {
         let key = key.to_js(self.value.env)?.get_value();
         let mut value = Value::new(self.value.env);
-        unsafe {
-            Status::result(napi_get_property(
-                self.value.env(),
-                self.value.get(),
-                key.get(),
-                value.get_mut()
-            ))?;
-        };
+
+        napi_call!(napi_get_property(
+            self.value.env(),
+            self.value.get(),
+            key.get(),
+            value.get_mut()
+        ))?;
+
         Ok(JsAny::from(value)?)
     }
 
     pub fn get_property_names(&self) -> Result<Vec<String>> {
         let mut value = Value::new(self.value.env);
-        unsafe {
-            Status::result(napi_get_property_names(
-                self.value.env(),
-                self.value.get(),
-                value.get_mut()
-            ))?;
-        };
+
+        napi_call!(napi_get_property_names(
+            self.value.env(),
+            self.value.get(),
+            value.get_mut()
+        ))?;
+
         let array = JsArray::from(value);
-        Ok(array.iter()?.filter_map(|v| v.as_string()).collect())
+        Ok(array.iter()?.filter_map(|v| v.as_string().ok()).collect())
     }
 
     pub(crate) fn get_property_names_any(&self) -> Result<Vec<JsAny<'e>>> {
         let mut value = Value::new(self.value.env);
-        unsafe {
-            Status::result(napi_get_property_names(
-                self.value.env(),
-                self.value.get(),
-                value.get_mut()
-            ))?;
-        };
+
+        napi_call!(napi_get_property_names(
+            self.value.env(),
+            self.value.get(),
+            value.get_mut()
+        ))?;
+
         let array = JsArray::from(value);
         array.with_values(JsAny::from)
     }
@@ -96,14 +96,14 @@ impl<'e> JsObject<'e> {
     {
         let mut result = false;
         let key = key.to_js(self.value.env)?.get_value();
-        unsafe {
-            Status::result(napi_has_property(
-                self.value.env(),
-                self.value.get(),
-                key.get(),
-                &mut result
-            ))?;
-        };
+
+        napi_call!(napi_has_property(
+            self.value.env(),
+            self.value.get(),
+            key.get(),
+            &mut result
+        ))?;
+
         Ok(result)
     }
 
@@ -113,14 +113,14 @@ impl<'e> JsObject<'e> {
     {
         let mut result = false;
         let key = key.to_js(self.value.env)?.get_value();
-        unsafe {
-            Status::result(napi_has_own_property(
-                self.value.env(),
-                self.value.get(),
-                key.get(),
-                &mut result
-            ))?;
-        };
+
+        napi_call!(napi_has_own_property(
+            self.value.env(),
+            self.value.get(),
+            key.get(),
+            &mut result
+        ))?;
+
         Ok(result)
     }
 
@@ -130,14 +130,14 @@ impl<'e> JsObject<'e> {
     {
         let mut result = false;
         let key = key.to_js(self.value.env)?.get_value();
-        unsafe {
-            Status::result(napi_delete_property(
-                self.value.env(),
-                self.value.get(),
-                key.get(),
-                &mut result
-            ))?;
-        };
+
+        napi_call!(napi_delete_property(
+            self.value.env(),
+            self.value.get(),
+            key.get(),
+            &mut result
+        ))?;
+
         Ok(result)
     }
 
@@ -146,43 +146,40 @@ impl<'e> JsObject<'e> {
                          .map(Into::into)
                          .collect::<Vec<_>>();
 
-        unsafe {
-            Status::result(napi_define_properties(
-                self.value.env(),
-                self.value.get(),
-                props.len(),
-                props.as_ptr()
-            ))?;
-        }
+        napi_call!(napi_define_properties(
+            self.value.env(),
+            self.value.get(),
+            props.len(),
+            props.as_ptr()
+        ))?;
 
         Ok(())
     }
 
     pub fn define_property(&self, prop: PropertyDescriptor) -> Result<()> {
-        unsafe {
-            Status::result(napi_define_properties(
-                self.value.env(),
-                self.value.get(),
-                1,
-                &prop.into()
-            ))?;
-        }
+        napi_call!(napi_define_properties(
+            self.value.env(),
+            self.value.get(),
+            1,
+            &prop.into()
+        ))?;
 
         Ok(())
     }
 
     pub(crate) fn napi_unwrap<T>(&self) -> Result<*mut T> {
         let mut obj: *mut T = std::ptr::null_mut();
-        unsafe {
-            Status::result(napi_unwrap(
-                self.value.env(),
-                self.get_value().value,
-                &mut obj as *mut *mut T as *mut *mut std::ffi::c_void
-            ))?;
-        }
+
+        napi_call!(napi_unwrap(
+            self.value.env(),
+            self.get_value().value,
+            &mut obj as *mut *mut T as *mut *mut std::ffi::c_void
+        ))?;
+
         if obj.is_null() {
             return Err(JsClassError::Unwrap.into())
         }
+
         Ok(obj)
     }
 }

@@ -16,13 +16,11 @@ pub struct JsExternal<'e> {
 impl<'e> JsExternal<'e> {
     fn get_external<T>(&self) -> Result<*mut External<T>> {
         let mut external: *mut External<T> = std::ptr::null_mut();
-        unsafe {
-            Status::result(napi_get_value_external(
-                self.value.env(),
-                self.get_value().value,
-                &mut external as *mut *mut External<T> as *mut *mut std::ffi::c_void
-            ))?;
-        }
+        napi_call!(napi_get_value_external(
+            self.value.env(),
+            self.get_value().value,
+            &mut external as *mut *mut External<T> as *mut *mut std::ffi::c_void
+        ))?;
         if external.is_null() {
             return Err(JsExternalError.into())
         }

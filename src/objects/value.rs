@@ -43,26 +43,22 @@ impl Value {
     }
 
     pub(crate) fn type_of(&self) -> Result<ValueType> {
-        unsafe {
-            let mut result: napi_valuetype = std::mem::zeroed();
-            Status::result(napi_typeof(
-                self.env.env(),
-                self.value,
-                &mut result as *mut napi_valuetype
-            ))?;
-            Ok(ValueType::from(result))
-        }
+        let mut result: napi_valuetype = unsafe { std::mem::zeroed() };
+        napi_call!(napi_typeof(
+            self.env.env(),
+            self.value,
+            &mut result as *mut napi_valuetype
+        ))?;
+        Ok(ValueType::from(result))
     }
 
     pub(crate) fn is_array(&self) -> Result<bool> {
-        unsafe {
-            let mut result: bool = false;
-            Status::result(napi_is_array(
-                self.env.env(),
-                self.value,
-                &mut result as *mut bool
-            ))?;
-            Ok(result)
-        }
+        let mut result: bool = false;
+        napi_call!(napi_is_array(
+            self.env.env(),
+            self.value,
+            &mut result as *mut bool
+        ))?;
+        Ok(result)
     }
 }

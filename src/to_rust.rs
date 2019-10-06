@@ -17,14 +17,16 @@ impl<'e> ToRust<String> for JsString<'e>
         let len = self.len()?;
         let mut buffer: Vec<u8> = Vec::with_capacity(len + 1); // + '\0'
         let mut written = 0usize;
+
+        napi_call!(napi_get_value_string_utf8(
+            self.value.env(),
+            self.value.get(),
+            buffer.as_mut_ptr() as *mut c_char,
+            len + 1,
+            &mut written as *mut usize
+        ))?;
+
         unsafe {
-            Status::result(napi_get_value_string_utf8(
-                self.value.env(),
-                self.value.get(),
-                buffer.as_mut_ptr() as *mut c_char,
-                len + 1,
-                &mut written as *mut usize
-            ))?;
             buffer.set_len(written);
             // It's probably safe to assume that it's valid ut8
             Ok(String::from_utf8_unchecked(buffer))
@@ -32,25 +34,11 @@ impl<'e> ToRust<String> for JsString<'e>
     }
 }
 
-// Refactor with String (above)
 impl<'e> ToRust<PathBuf> for JsString<'e>
 {
     fn to_rust(&self) -> Result<PathBuf> {
-        let len = self.len()?;
-        let mut buffer: Vec<u8> = Vec::with_capacity(len + 1); // + '\0'
-        let mut written = 0usize;
-        unsafe {
-            Status::result(napi_get_value_string_utf8(
-                self.value.env(),
-                self.value.get(),
-                buffer.as_mut_ptr() as *mut c_char,
-                len + 1,
-                &mut written as *mut usize
-            ))?;
-            buffer.set_len(written);
-            // It's probably safe to assume that it's valid ut8
-            Ok(PathBuf::from(String::from_utf8_unchecked(buffer)))
-        }
+        let result: Result<String> = self.to_rust();
+        result.map(PathBuf::from)
     }
 }
 
@@ -66,13 +54,13 @@ impl<'e> ToRust<()> for JsString<'e>
 impl<'e> ToRust<i64> for JsNumber<'e> {
     fn to_rust(&self) -> Result<i64> {
         let mut number = 0i64;
-        unsafe {
-            Status::result(napi_get_value_int64(
-                self.value.env(),
-                self.value.get(),
-                &mut number as *mut i64
-            ))?;
-        }
+
+        napi_call!(napi_get_value_int64(
+            self.value.env(),
+            self.value.get(),
+            &mut number as *mut i64
+        ))?;
+
         Ok(number)
     }
 }
@@ -80,13 +68,13 @@ impl<'e> ToRust<i64> for JsNumber<'e> {
 impl<'e> ToRust<i32> for JsNumber<'e> {
     fn to_rust(&self) -> Result<i32> {
         let mut number = 0i32;
-        unsafe {
-            Status::result(napi_get_value_int32(
-                self.value.env(),
-                self.value.get(),
-                &mut number as *mut i32
-            ))?;
-        }
+
+        napi_call!(napi_get_value_int32(
+            self.value.env(),
+            self.value.get(),
+            &mut number as *mut i32
+        ))?;
+
         Ok(number)
     }
 }
@@ -94,13 +82,13 @@ impl<'e> ToRust<i32> for JsNumber<'e> {
 impl<'e> ToRust<u32> for JsNumber<'e> {
     fn to_rust(&self) -> Result<u32> {
         let mut number = 0u32;
-        unsafe {
-            Status::result(napi_get_value_uint32(
-                self.value.env(),
-                self.value.get(),
-                &mut number as *mut u32
-            ))?;
-        }
+
+        napi_call!(napi_get_value_uint32(
+            self.value.env(),
+            self.value.get(),
+            &mut number as *mut u32
+        ))?;
+
         Ok(number)
     }
 }
@@ -108,13 +96,13 @@ impl<'e> ToRust<u32> for JsNumber<'e> {
 impl<'e> ToRust<f64> for JsNumber<'e> {
     fn to_rust(&self) -> Result<f64> {
         let mut number = 0f64;
-        unsafe {
-            Status::result(napi_get_value_double(
-                self.value.env(),
-                self.value.get(),
-                &mut number as *mut f64
-            ))?;
-        }
+
+        napi_call!(napi_get_value_double(
+            self.value.env(),
+            self.value.get(),
+            &mut number as *mut f64
+        ))?;
+
         Ok(number)
     }
 }
@@ -122,13 +110,13 @@ impl<'e> ToRust<f64> for JsNumber<'e> {
 impl<'e> ToRust<bool> for JsBoolean<'e> {
     fn to_rust(&self) -> Result<bool> {
         let mut result = false;
-        unsafe {
-            Status::result(napi_get_value_bool(
-                self.value.env(),
-                self.value.get(),
-                &mut result as *mut bool
-            ))?;
-        }
+
+        napi_call!(napi_get_value_bool(
+            self.value.env(),
+            self.value.get(),
+            &mut result as *mut bool
+        ))?;
+
         Ok(result)
     }
 }
@@ -171,7 +159,7 @@ where
     T: DeserializeOwned
 {
     fn to_rust(&self) -> Result<Vec<T>> {
-        let env = self.env();
+        let env = self.value.env;
         let mut vec = Vec::with_capacity(self.len()?);
         for elem in self.iter()? {
             let elem: Result<_> = pinar_serde::de::from_any::<T>(env, elem).map_err(|e| {

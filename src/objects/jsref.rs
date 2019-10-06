@@ -26,12 +26,9 @@ where
     T: JsValue
 {
     fn drop(&mut self) {
-        if Rc::strong_count(&self.inner) > 1 {
-            return;
-        }
-        let inner = &self.inner;
-        unsafe {
-            Status::result(napi_delete_reference(
+        if Rc::strong_count(&self.inner) == 1 {
+            let inner = &self.inner;
+            napi_call!(napi_delete_reference(
                 inner.env.env(),
                 inner.js_ref
             )).expect("Fail to drop a JsRef");
@@ -51,14 +48,14 @@ macro_rules! impl_jsref {
                 fn as_js_ref(&self) -> Result<JsRef<$jstype<'static>>> {
                     let env = self.get_value().env;
                     let mut js_ref: napi_ref = std::ptr::null_mut();
-                    unsafe {
-                        Status::result(napi_create_reference(
-                            env.env(),
-                            self.get_value().value,
-                            1,
-                            &mut js_ref as *mut napi_ref
-                        ))?;
-                    }
+
+                    napi_call!(napi_create_reference(
+                        env.env(),
+                        self.get_value().value,
+                        1,
+                        &mut js_ref as *mut napi_ref
+                    ))?;
+
                     Ok(JsRef {
                         inner: Rc::new(JsRefInner {
                             env,
@@ -70,15 +67,15 @@ macro_rules! impl_jsref {
             }
 
             impl<'a, 'e> JsRef<$jstype<'a>> {
-                pub fn get(&self) -> Result<$jstype<'e>> {
+                pub fn deref(&self) -> Result<$jstype<'e>> {
                     let mut result = Value::new(self.inner.env);
-                    unsafe {
-                        Status::result(napi_get_reference_value(
-                            self.inner.env.env(),
-                            self.inner.js_ref,
-                            result.get_mut()
-                        ))?;
-                    }
+
+                    napi_call!(napi_get_reference_value(
+                        self.inner.env.env(),
+                        self.inner.js_ref,
+                        result.get_mut()
+                    ))?;
+
                     Ok($jstype::from(result))
                 }
             }

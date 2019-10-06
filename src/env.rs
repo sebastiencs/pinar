@@ -69,163 +69,163 @@ impl Env {
 
     pub fn boolean<'e>(&self, b: bool) -> Result<JsBoolean<'e>> {
         let mut value = Value::new(*self);
-        unsafe {
-            Status::result(napi_get_boolean(
-                self.env,
-                b,
-                value.get_mut()
-            ))?
-        };
+
+        napi_call!(napi_get_boolean(
+            self.env,
+            b,
+            value.get_mut()
+        ))?;
+
         Ok(JsBoolean::from(value))
     }
 
     pub fn double<'e>(&self, d: f64) -> Result<JsNumber<'e>> {
         let mut value = Value::new(*self);
-        unsafe {
-            Status::result(napi_create_double(
-                self.env,
-                d,
-                value.get_mut()
-            ))?
-        };
+
+        napi_call!(napi_create_double(
+            self.env,
+            d,
+            value.get_mut()
+        ))?;
+
         Ok(JsNumber::from(value))
     }
 
     pub fn object<'e>(&self) -> Result<JsObject<'e>> {
         let mut value = Value::new(*self);
-        unsafe {
-            Status::result(napi_create_object(
-                self.env,
-                value.get_mut()
-            ))?
-        };
+
+        napi_call!(napi_create_object(
+            self.env,
+            value.get_mut()
+        ))?;
+
         Ok(JsObject::from(value))
     }
 
     pub fn number<'e>(&self, n: i64) -> Result<JsNumber<'e>> {
         let mut value = Value::new(*self);
-        unsafe {
-            Status::result(napi_create_int64(
-                self.env,
-                n,
-                value.get_mut()
-            ))?
-        };
+
+        napi_call!(napi_create_int64(
+            self.env,
+            n,
+            value.get_mut()
+        ))?;
+
         Ok(JsNumber::from(value))
     }
 
     pub fn string<'e, S: AsRef<str>>(&self, s: S) -> Result<JsString<'e>> {
         let mut value = Value::new(*self);
         let s = s.as_ref();
-        unsafe {
-            Status::result(napi_create_string_utf8(
-                self.env,
-                s.as_ptr() as *const c_char,
-                s.len(),
-                value.get_mut()
-            ))?
-        };
+
+        napi_call!(napi_create_string_utf8(
+            self.env,
+            s.as_ptr() as *const c_char,
+            s.len(),
+            value.get_mut()
+        ))?;
+
         Ok(JsString::from(value))
     }
 
     pub fn array<'e>(&self) -> Result<JsArray<'e>> {
         let mut value = Value::new(*self);
-        unsafe {
-            Status::result(napi_create_array(
-                self.env,
-                value.get_mut()
-            ))?
-        };
+
+        napi_call!(napi_create_array(
+            self.env,
+            value.get_mut()
+        ))?;
+
         Ok(JsArray::from(value))
     }
 
     pub fn array_with_capacity<'e>(&self, cap: usize) -> Result<JsArray<'e>> {
         let mut value = Value::new(*self);
-        unsafe {
-            Status::result(napi_create_array_with_length(
-                self.env,
-                cap,
-                value.get_mut()
-            ))?
-        };
+
+        napi_call!(napi_create_array_with_length(
+            self.env,
+            cap,
+            value.get_mut()
+        ))?;
+
         Ok(JsArray::from(value))
     }
 
     pub fn global<'e>(&self) -> Result<JsObject<'e>> {
         let mut global = Value::new(*self);
-        unsafe {
-            Status::result(napi_get_global(
-                self.env,
-                global.get_mut()
-            ))?
-        };
+
+        napi_call!(napi_get_global(
+            self.env,
+            global.get_mut()
+        ))?;
+
         Ok(JsObject::from(global))
     }
 
     pub fn undefined<'e>(&self) -> Result<JsUndefined<'e>> {
         let mut undefined = Value::new(*self);
-        unsafe {
-            Status::result(napi_get_undefined(
-                self.env,
-                undefined.get_mut()
-            ))?
-        };
+
+        napi_call!(napi_get_undefined(
+            self.env,
+            undefined.get_mut()
+        ))?;
+
         Ok(JsUndefined::from(undefined))
     }
 
     pub fn null<'e>(&self) -> Result<JsNull<'e>> {
         let mut null = Value::new(*self);
-        unsafe {
-            Status::result(napi_get_null(
-                self.env,
-                null.get_mut()
-            ))?
-        };
+
+        napi_call!(napi_get_null(
+            self.env,
+            null.get_mut()
+        ))?;
+
         Ok(JsNull::from(null))
     }
 
     pub fn external_box<'e, T: 'static>(&self, ptr: Box<T>) -> Result<JsExternal<'e>> {
         let mut result = Value::new(*self);
         let external = Box::new(External::new_box(ptr));
-        unsafe {
-            Status::result(napi_create_external(
-                self.env,
-                Box::into_raw(external) as *mut c_void,
-                Some(__pinar_drop_box::<External<T>>),
-                std::ptr::null_mut(),
-                result.get_mut()
-            ))?;
-        }
+
+        napi_call!(napi_create_external(
+            self.env,
+            Box::into_raw(external) as *mut c_void,
+            Some(__pinar_drop_box::<External<T>>),
+            std::ptr::null_mut(),
+            result.get_mut()
+        ))?;
+
         Ok(JsExternal::from(result))
     }
 
     pub fn external_rc<'e, T: 'static>(&self, ptr: Rc<T>) -> Result<JsExternal<'e>> {
         let mut result = Value::new(*self);
         let external = Box::new(External::new_rc(ptr));
-        unsafe {
-            Status::result(napi_create_external(
-                self.env,
-                Box::into_raw(external) as *mut c_void,
-                Some(__pinar_drop_box::<External<T>>),
-                std::ptr::null_mut(),
-                result.get_mut()
-            ))?;
-        }
+
+        napi_call!(napi_create_external(
+            self.env,
+            Box::into_raw(external) as *mut c_void,
+            Some(__pinar_drop_box::<External<T>>),
+            std::ptr::null_mut(),
+            result.get_mut()
+        ))?;
+
         Ok(JsExternal::from(result))
     }
 
     pub fn external_arc<'e, T: 'static>(&self, ptr: Arc<T>) -> Result<JsExternal<'e>> {
         let mut result = Value::new(*self);
         let external = Box::new(External::new_arc(ptr));
-        unsafe {
-            Status::result(napi_create_external(
-                self.env,
-                Box::into_raw(external) as *mut c_void,
-                Some(__pinar_drop_box::<External<T>>),
-                std::ptr::null_mut(),
-                result.get_mut()
-            ))?;
-        }
+
+        napi_call!(napi_create_external(
+            self.env,
+            Box::into_raw(external) as *mut c_void,
+            Some(__pinar_drop_box::<External<T>>),
+            std::ptr::null_mut(),
+            result.get_mut()
+        ))?;
+
         Ok(JsExternal::from(result))
     }
 
@@ -248,24 +248,24 @@ impl Env {
         let mut result = Value::new(*self);
         let name = name.as_ref();
         let raw = Rc::into_raw(fun);
-        unsafe {
-            Status::result(napi_create_function(
-                self.env,
-                name.as_ptr() as *const i8,
-                name.len(),
-                Some(__pinar_dispatch_function),
-                raw as *mut std::ffi::c_void,
-                result.get_mut()
-            ))?;
-            Status::result(napi_add_finalizer(
-                self.env,
-                result.get(),
-                raw as *mut std::ffi::c_void,
-                Some(__pinar_drop_rc::<ModuleFunction>),
-                std::ptr::null_mut(),
-                std::ptr::null_mut()
-            ))?;
-        }
+
+        napi_call!(napi_create_function(
+            self.env,
+            name.as_ptr() as *const i8,
+            name.len(),
+            Some(__pinar_dispatch_function),
+            raw as *mut std::ffi::c_void,
+            result.get_mut()
+        ))?;
+        napi_call!(napi_add_finalizer(
+            self.env,
+            result.get(),
+            raw as *mut std::ffi::c_void,
+            Some(__pinar_drop_rc::<ModuleFunction>),
+            std::ptr::null_mut(),
+            std::ptr::null_mut()
+        ))?;
+
         Ok(JsFunction::from(result))
     }
 
@@ -274,17 +274,18 @@ impl Env {
         let mut argv: Vec<napi_value> = Vec::with_capacity(argc);
         let mut this = Value::new(*self);
         let mut data_ptr: *mut D = std::ptr::null_mut();
-        unsafe {
-            Status::result(napi_get_cb_info(
-                self.env,
-                info,
-                &mut argc as *mut usize,
-                argv.as_mut_ptr() as *mut napi_value,
-                this.get_mut(),
-                &mut data_ptr as *mut *mut D as *mut *mut std::ffi::c_void
-            ))?;
-            argv.set_len(argc);
-        }
+
+        napi_call!(napi_get_cb_info(
+            self.env,
+            info,
+            &mut argc as *mut usize,
+            argv.as_mut_ptr() as *mut napi_value,
+            this.get_mut(),
+            &mut data_ptr as *mut *mut D as *mut *mut std::ffi::c_void
+        ))?;
+
+        unsafe { argv.set_len(argc) };
+
         Ok((data_ptr, Arguments::new(*self, this, &argv)?))
     }
 
@@ -293,9 +294,9 @@ impl Env {
         V: ToJs<'e>
     {
         let error = error.to_js(*self)?.get_value();
-        unsafe {
-            Status::result(napi_throw(self.env, error.get()))?;
-        }
+
+        napi_call!(napi_throw(self.env, error.get()))?;
+
         Err(Status::PendingException.into())
     }
 
@@ -309,13 +310,13 @@ impl Env {
             Some(code) => code.as_ptr(),
             _ => std::ptr::null()
         };
-        unsafe {
-            Status::result(napi_throw_error(
-                self.env,
-                code_ptr,
-                msg.as_ptr()
-            ))?;
-        }
+
+        napi_call!(napi_throw_error(
+            self.env,
+            code_ptr,
+            msg.as_ptr()
+        ))?;
+
         Err(Status::PendingException.into())
     }
 
@@ -329,13 +330,13 @@ impl Env {
             Some(code) => code.as_ptr(),
             _ => std::ptr::null()
         };
-        unsafe {
-            Status::result(napi_throw_type_error(
-                self.env,
-                code_ptr,
-                msg.as_ptr()
-            ))?;
-        }
+
+        napi_call!(napi_throw_type_error(
+            self.env,
+            code_ptr,
+            msg.as_ptr()
+        ))?;
+
         Err(Status::PendingException.into())
     }
 
@@ -349,13 +350,13 @@ impl Env {
             Some(code) => code.as_ptr(),
             _ => std::ptr::null()
         };
-        unsafe {
-            Status::result(napi_throw_range_error(
-                self.env,
-                code_ptr,
-                msg.as_ptr()
-            ))?;
-        }
+
+        napi_call!(napi_throw_range_error(
+            self.env,
+            code_ptr,
+            msg.as_ptr()
+        ))?;
+
         Err(Status::PendingException.into())
     }
 
@@ -365,13 +366,13 @@ impl Env {
     {
         let script = self.string(script)?;
         let mut result = Value::new(*self);
-        unsafe {
-            Status::result(napi_run_script(
-                self.env,
-                script.get_value().value,
-                result.get_mut()
-            ))?;
-        }
+
+        napi_call!(napi_run_script(
+            self.env,
+            script.get_value().value,
+            result.get_mut()
+        ))?;
+
         JsAny::from(result)
     }
 }

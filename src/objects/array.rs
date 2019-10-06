@@ -24,13 +24,11 @@ impl<'e> JsArray<'e> {
 
     pub fn len(&self) -> Result<usize> {
         let mut len: u32 = 0;
-        unsafe {
-            Status::result(napi_get_array_length(
-                self.value.env(),
-                self.value.get(),
-                &mut len as *mut u32
-            ))?;
-        }
+        napi_call!(napi_get_array_length(
+            self.value.env(),
+            self.value.get(),
+            &mut len as *mut u32
+        ))?;
         Ok(len as usize)
     }
 
@@ -39,54 +37,40 @@ impl<'e> JsArray<'e> {
         V: ToJs<'e>
     {
         let value = value.to_js(self.value.env)?.get_value();
-        unsafe {
-            Status::result(napi_set_element(
-                self.value.env(),
-                self.value.get(),
-                index,
-                value.get()
-            ))?;
-        };
+        napi_call!(napi_set_element(
+            self.value.env(),
+            self.value.get(),
+            index,
+            value.get()
+        ))?;
         Ok(())
     }
 
-    pub fn set_ref<V>(&self, index: u32, value: &V) -> Result<()>
+    pub(crate) fn set_ref<V>(&self, index: u32, value: &V) -> Result<()>
     where
         V: ToJs<'e>
     {
         let value = value.to_js(self.value.env)?.get_value();
-        unsafe {
-            Status::result(napi_set_element(
-                self.value.env(),
-                self.value.get(),
-                index,
-                value.get()
-            ))?;
-        };
+        napi_call!(napi_set_element(
+            self.value.env(),
+            self.value.get(),
+            index,
+            value.get()
+        ))?;
         Ok(())
     }
 
     pub fn get(&self, index: u32) -> Result<JsAny<'e>> {
-        let mut value = Value::new(self.value.env);
-        unsafe {
-            Status::result(napi_get_element(
-                self.value.env(),
-                self.value.get(),
-                index, value.get_mut()
-            ))?;
-        }
-        JsAny::from(value)
+        JsAny::from(self.get_value(index)?)
     }
 
     fn get_value(&self, index: u32) -> Result<Value> {
         let mut value = Value::new(self.value.env);
-        unsafe {
-            Status::result(napi_get_element(
-                self.value.env(),
-                self.value.get(),
-                index, value.get_mut()
-            ))?;
-        }
+        napi_call!(napi_get_element(
+            self.value.env(),
+            self.value.get(),
+            index, value.get_mut()
+        ))?;
         Ok(value)
     }
 

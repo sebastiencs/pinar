@@ -4,7 +4,7 @@ use std::rc::Rc;
 use std::ffi::c_void;
 use napi_sys::*;
 use std::ffi::CString;
-use std::any::{TypeId};
+use std::any::TypeId;
 
 use crate::prelude::*;
 use crate::error::JsClassError;
@@ -21,27 +21,32 @@ pub trait JsClass : Sized + 'static {
     fn default_properties(builder: ClassBuilder<Self>) -> ClassBuilder<Self> {
         builder
     }
+
     fn new_instance<'e>(env: Env, args: Self::ArgsConstructor) -> Result<JsObject<'e>> {
         ClassBuilder::<Self>::new_instance(env, args)
     }
 }
 
 trait JsClassInternal {
-    unsafe extern "C" fn __pinar_class_constructor(env: napi_env, cb_info: napi_callback_info) -> napi_value;
-    unsafe extern "C" fn __pinar_class_dispatch(env: napi_env, cb_info: napi_callback_info) -> napi_value;
-    unsafe extern "C" fn __pinar_nop(env: napi_env, cb_info: napi_callback_info) -> napi_value;
     const CLASS_DATA: &'static str;
     const PINAR_CLASS_ID: &'static str;
+
+    extern "C" fn __pinar_class_constructor(env: napi_env, cb_info: napi_callback_info) -> napi_value;
+    extern "C" fn __pinar_class_dispatch(env: napi_env, cb_info: napi_callback_info) -> napi_value;
 }
 
 pub(crate) unsafe extern "C" fn __pinar_drop_box<T>(_env: napi_env, data: *mut c_void, _finalize_hint: *mut c_void) {
-    // println!("DROPPING BOX {:?} {:x?}", std::intrinsics::type_name::<T>(), data);
+    // println!("DROPPING BOX {:?} {:x?}", std::any::type_name::<T>(), data);
     Box::<T>::from_raw(data as *mut T);
 }
 
 pub(crate) unsafe extern "C" fn __pinar_drop_rc<T>(_env: napi_env, data: *mut c_void, _finalize_hint: *mut c_void) {
-    // println!("DROPPING RC {:?} {:x?}", std::intrinsics::type_name::<T>(), data);
+    // println!("DROPPING RC {:?} {:x?}", std::any::type_name::<T>(), data);
     Rc::<T>::from_raw(data as *mut T);
+}
+
+extern "C" fn __pinar_nop(_env: napi_env, _cb_info: napi_callback_info) -> napi_value {
+    std::ptr::null_mut()
 }
 
 #[inline]
@@ -72,7 +77,7 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
     const CLASS_DATA: &'static str = "__pinar_class_data__";
     const PINAR_CLASS_ID: &'static str = "___pinar___class___id___";
 
-    unsafe extern "C" fn __pinar_class_constructor(
+    extern "C" fn __pinar_class_constructor(
         env: napi_env,
         cb_info: napi_callback_info
     ) -> napi_value
@@ -82,7 +87,7 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
         execute_safely(env, || {
             let env = Env::from(env);
             let (class_data, args) = env.callback_info::<JsClassData<Self>>(cb_info)?;
-            let mut class_data = Rc::from_raw(class_data);
+            let mut class_data = unsafe { Rc::from_raw(class_data) };
 
             let class = if class_data.args_rust.is_some() {
                 let args_rust = Rc::make_mut(&mut class_data).args_rust.take().expect("None value here");
@@ -98,7 +103,7 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
             std::mem::forget(class_data);
 
             let this = args.this()?.as_jsobject()
-                                   .ok_or_else(|| ThisConstructor(C::CLASSNAME))?;
+                                   .map_err(|_| ThisConstructor(C::CLASSNAME))?;
 
             if !(this.has_property(C::PINAR_CLASS_ID)?) {
                 return Err(ThisConstructor(C::CLASSNAME).into())
@@ -112,7 +117,7 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
                 copy_class_data
             )?)?;
 
-            Status::result(napi_wrap(
+            napi_call!(napi_wrap(
                 env.env(),
                 this.get_value().value,
                 Box::into_raw(class) as *mut c_void,
@@ -125,7 +130,7 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
         })
     }
 
-    unsafe extern "C" fn __pinar_class_dispatch(
+    extern "C" fn __pinar_class_dispatch(
         env: napi_env,
         cb_info: napi_callback_info
     ) -> napi_value
@@ -138,11 +143,11 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
 
             let this = args.this()?
                            .as_jsobject()
-                           .ok_or_else(|| ThisMethod(C::CLASSNAME))?;
+                           .map_err(|_| ThisMethod(C::CLASSNAME))?;
 
             let external = this.get(Self::CLASS_DATA)?
                                .as_jsexternal()
-                               .ok_or_else(|| ExternalClassData)?;
+                               .map_err(|_| ExternalClassData)?;
 
             let this = this.napi_unwrap::<Self>()?;
             let class_data = external.get_rc::<JsClassData<Self>>()?;
@@ -152,17 +157,10 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
             }
 
             match class_data.methods.get(key as usize) {
-                Some(method) => method.call(&mut *this, &args),
+                Some(method) => method.call(unsafe { &mut *this }, &args),
                 _ => Err(WrongHandler.into())
             }
         })
-    }
-
-    unsafe extern "C" fn __pinar_nop(
-        _env: napi_env,
-        _cb_info: napi_callback_info
-    ) -> napi_value {
-        std::ptr::null_mut()
     }
 }
 
@@ -277,7 +275,7 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
         props.push( napi_property_descriptor {
             utf8name: std::ptr::null_mut(),
             name: name.get_value().value,
-            method: Some(C::__pinar_nop),
+            method: Some(__pinar_nop),
             getter: None,
             setter: None,
             value: std::ptr::null_mut(),
@@ -299,26 +297,27 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
         }));
 
         let mut result = Value::new(*env);
-        unsafe {
-            Status::result(napi_define_class(
-                env.env(),
-                self.name.as_ptr() as *const i8,
-                self.name.len(),
-                Some(C::__pinar_class_constructor),
-                data_ptr as *mut c_void,
-                props.len(),
-                props.as_ptr(),
-                result.get_mut()
-            ))?;
-            Status::result(napi_add_finalizer(
-                env.env(),
-                result.get(),
-                data_ptr as *mut c_void,
-                Some(__pinar_drop_rc::<JsClassData<C>>),
-                std::ptr::null_mut(),
-                std::ptr::null_mut()
-            ))?;
-        }
+
+        napi_call!(napi_define_class(
+            env.env(),
+            self.name.as_ptr() as *const i8,
+            self.name.len(),
+            Some(C::__pinar_class_constructor),
+            data_ptr as *mut c_void,
+            props.len(),
+            props.as_ptr(),
+            result.get_mut()
+        ))?;
+
+        napi_call!(napi_add_finalizer(
+            env.env(),
+            result.get(),
+            data_ptr as *mut c_void,
+            Some(__pinar_drop_rc::<JsClassData<C>>),
+            std::ptr::null_mut(),
+            std::ptr::null_mut()
+        ))?;
+
         Ok(JsFunction::from(result))
     }
 

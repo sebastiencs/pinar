@@ -13,17 +13,17 @@ pub struct JsString<'e> {
 impl<'e> JsString<'e> {
     /// Returns the string length
     pub fn len(&self) -> Result<usize> {
-        unsafe {
-            let mut length = 0;
-            Status::result(napi_get_value_string_utf8(
-                self.value.env(),
-                self.value.get(),
-                std::ptr::null_mut() as *mut c_char,
-                0,
-                &mut length as *mut usize
-            ))?;
-            Ok(length)
-        }
+        let mut length = 0;
+
+        napi_call!(napi_get_value_string_utf8(
+            self.value.env(),
+            self.value.get(),
+            std::ptr::null_mut() as *mut c_char,
+            0,
+            &mut length as *mut usize
+        ))?;
+
+        Ok(length)
     }
 }
 

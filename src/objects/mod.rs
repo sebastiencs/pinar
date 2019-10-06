@@ -79,24 +79,24 @@ pub enum JsAny<'e> {
 impl<'e> std::fmt::Debug for JsAny<'e> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let inner = match self {
-            JsAny::String(s) => {
+            JsAny::String(_) => {
                 // let s = s.to_string().as_str();
                 // &s
-                &"String"
+                "String"
             }
-            JsAny::Object(s) => { &"Object" }
-            JsAny::Array(s) => { &"Array" }
-            JsAny::Number(s) => { &"Number" }
-            JsAny::Symbol(s) => { &"Symbol" }
-            JsAny::External(s) => { &"External" }
-            JsAny::Function(s) => { &"Function" }
-            JsAny::Undefined(s) => { &"Undefined" }
-            JsAny::Null(s) => { &"Null" }
-            JsAny::Boolean(s) => { &"Boolean" }
-            JsAny::BigInt(s) => { &"BigInt" }
+            JsAny::Object(_) => { "Object" }
+            JsAny::Array(_) => { "Array" }
+            JsAny::Number(_) => { "Number" }
+            JsAny::Symbol(_) => { "Symbol" }
+            JsAny::External(_) => { "External" }
+            JsAny::Function(_) => { "Function" }
+            JsAny::Undefined(_) => { "Undefined" }
+            JsAny::Null(_) => { "Null" }
+            JsAny::Boolean(_) => { "Boolean" }
+            JsAny::BigInt(_) => { "BigInt" }
         };
         f.debug_struct("JsAny")
-         .field("inner", inner)
+         .field("inner", &inner)
          .finish()
     }
 }
