@@ -130,6 +130,17 @@ where
     }
 }
 
+#[cfg(feature = "json")]
+impl FromArguments for serde_json::Value
+{
+    fn from_args(args: &Arguments) -> Result<Self> {
+        match args.next_arg() {
+            Some(any) => { any.to_rust() }
+            _ => Err(ArgumentsError::missing(args.arg_number()))
+        }
+    }
+}
+
 impl FromArguments for Env {
     fn from_args(args: &Arguments) -> Result<Self> {
         Ok(args.env)

@@ -78,6 +78,16 @@ impl<'e> ToJs<'e> for String {
     }
 }
 
+
+#[cfg(feature = "json")]
+impl<'e> ToJs<'e> for serde_json::Value {
+    type Value = Value;
+
+    fn to_js(&self, env: Env) -> Result<Value> {
+        Ok(serialize_to_js(env, self).unwrap())
+    }
+}
+
 // impl<'e, 'p> ToJs<'e> for &'p PathBuf {
 //     type Value = JsString<'e>;
 //     fn to_js(&self, env: Env) -> Result<JsString<'e>> {

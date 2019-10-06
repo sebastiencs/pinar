@@ -121,6 +121,15 @@ impl<'e> ToRust<bool> for JsBoolean<'e> {
     }
 }
 
+
+#[cfg(feature = "json")]
+impl<'e> ToRust<serde_json::Value> for JsAny<'e> {
+    fn to_rust(&self) -> Result<serde_json::Value> {
+        crate::pinar_serde::de::from_any(self.env(), self.clone())
+            .map_err(|e| e.into())
+    }
+}
+
 impl<'e, T: 'static> ToRust<Arc<T>> for JsExternal<'e>
 {
     fn to_rust(&self) -> Result<Arc<T>> {
