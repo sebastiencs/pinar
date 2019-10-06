@@ -21,13 +21,13 @@ where
     phantom: PhantomData<(T, R)>
 }
 
-pub(crate) struct DataThreadSafe<T, R = ()>
+struct DataThreadSafe<T, R = ()>
 where
     T: MultiJs + 'static,
     R: DeserializeOwned,
 {
-    pub(crate) send_result: Option<SyncSender<R>>,
-    pub(crate) args: Box<T>
+    send_result: Option<SyncSender<R>>,
+    args: Box<T>
 }
 
 unsafe impl<T: MultiJs, R: DeserializeOwned> Send for JsFunctionThreadSafe<T, R> {}

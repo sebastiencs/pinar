@@ -4,7 +4,6 @@ use std::marker::PhantomData;
 use serde::de::DeserializeOwned;
 
 use crate::prelude::*;
-use crate::function_threadsafe::{JsFunctionThreadSafe, DataThreadSafe};
 use crate::*;
 
 pub struct JsFunction<'e> {
