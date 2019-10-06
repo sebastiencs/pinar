@@ -52,13 +52,11 @@ where
             send_result: Some(sender),
             args: args.into()
         });
-        unsafe {
-            Status::result(napi_call_threadsafe_function(
-                self.fun.load(Ordering::Relaxed),
-                Box::into_raw(data) as *mut c_void,
-                napi_threadsafe_function_call_mode::napi_tsfn_nonblocking
-            ))?;
-        }
+        napi_call!(napi_call_threadsafe_function(
+            self.fun.load(Ordering::Relaxed),
+            Box::into_raw(data) as *mut c_void,
+            napi_threadsafe_function_call_mode::napi_tsfn_blocking
+        ))?;
         Ok(receiver.recv().unwrap())
     }
 
@@ -67,32 +65,26 @@ where
             send_result: None,
             args: args.into()
         });
-        unsafe {
-            Status::result(napi_call_threadsafe_function(
-                self.fun.load(Ordering::Relaxed),
-                Box::into_raw(data) as *mut c_void,
-                napi_threadsafe_function_call_mode::napi_tsfn_nonblocking
-            ))?;
-        }
+        napi_call!(napi_call_threadsafe_function(
+            self.fun.load(Ordering::Relaxed),
+            Box::into_raw(data) as *mut c_void,
+            napi_threadsafe_function_call_mode::napi_tsfn_blocking
+        ))?;
         Ok(())
     }
 
     fn acquire(&self) -> Result<()> {
-        unsafe {
-            Status::result(napi_acquire_threadsafe_function(
-                self.fun.load(Ordering::Relaxed)
-            ))?;
-        }
+        napi_call!(napi_acquire_threadsafe_function(
+            self.fun.load(Ordering::Relaxed)
+        ))?;
         Ok(())
     }
 
     fn release(&self) {
-        unsafe {
-            napi_release_threadsafe_function(
-                self.fun.load(Ordering::Relaxed),
-                napi_threadsafe_function_release_mode::napi_tsfn_release
-            );
-        }
+        napi_call!(napi_release_threadsafe_function(
+            self.fun.load(Ordering::Relaxed),
+            napi_threadsafe_function_release_mode::napi_tsfn_release
+        ));
     }
 }
 
@@ -120,21 +112,20 @@ where
 
         let resource_name = "rust_threadsafe_function".to_js(fun.value.env)?;
 
-        unsafe {
-            Status::result(napi_create_threadsafe_function(
-                fun.value.env(),
-                fun.value.get(),
-                std::ptr::null_mut(),
-                resource_name.get_value().get(),
-                0,
-                1,
-                std::ptr::null_mut(),
-                None,
-                std::ptr::null_mut(),
-                Some(__pinar_threadsafe_function::<T, R>),
-                &mut result
-            ))?;
-        }
+        napi_call!(napi_create_threadsafe_function(
+            fun.value.env(),
+            fun.value.get(),
+            std::ptr::null_mut(),
+            resource_name.get_value().get(),
+            0,
+            1,
+            std::ptr::null_mut(),
+            None,
+            std::ptr::null_mut(),
+            Some(__pinar_threadsafe_function::<T, R>),
+            &mut result
+        ))?;
+
         JsFunctionThreadSafe::<T, R>::new(result)
     }
 }

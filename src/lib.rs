@@ -20,6 +20,16 @@
 #![feature(unboxed_closures)]
 #![feature(fn_traits)]
 
+macro_rules! napi_call {
+    (
+        $fun:expr
+    ) => {
+        // Calls to napi require unsafe
+        // Convert the result to a Status
+        unsafe { Status::result($fun) }
+    }
+}
+
 //use crate::arguments::{Arguments, FromArguments};
 use crate::error::ArgumentsError;
 //use crate::module::__pinar_dispatch_function;
