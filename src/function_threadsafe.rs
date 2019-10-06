@@ -2,23 +2,31 @@
 use std::ffi::c_void;
 use std::marker::PhantomData;
 use std::cell::Cell;
+use std::sync::atomic::{AtomicPtr, AtomicBool, Ordering};
+use std::sync::Arc;
 use std::sync::mpsc::{sync_channel, SyncSender};
 use napi_sys::*;
 use crate::Result;
 use crate::prelude::*;
 use serde::de::DeserializeOwned;
 
+// Make JsFunctionThreadSafe Sync
+struct ThreadSafeInner {
+    fun: AtomicPtr<napi_threadsafe_function__>,
+    acquired: AtomicBool
+}
+
+#[derive(Clone)]
 pub struct JsFunctionThreadSafe<T: MultiJs, R: DeserializeOwned> {
-    fun: napi_threadsafe_function,
-    acquired: Cell<bool>,
+    inner: Arc<ThreadSafeInner>,
     phantom: PhantomData<(T, R)>
 }
 
 impl<T: MultiJs, R: DeserializeOwned> std::fmt::Debug for JsFunctionThreadSafe<T, R> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         f.debug_struct("JsFunctionThreadSafe")
-            .field("function ptr", &self.fun)
-            .field("acquired", &self.acquired)
+            .field("function ptr", &self.inner.fun.load(Ordering::Relaxed))
+            .field("acquired", &self.inner.acquired.load(Ordering::Relaxed))
             .finish()
     }
 }
@@ -34,8 +42,10 @@ impl<T: MultiJs, R: DeserializeOwned> JsFunctionThreadSafe<T, R> {
 
     pub(crate) fn new(fun: napi_threadsafe_function) -> JsFunctionThreadSafe<T, R> {
         JsFunctionThreadSafe {
-            fun,
-            acquired: Cell::new(false),
+            inner: Arc::new(ThreadSafeInner {
+                fun: AtomicPtr::new(fun),
+                acquired: AtomicBool::new(false),
+            }),
             phantom: PhantomData
         }
     }
@@ -49,7 +59,7 @@ impl<T: MultiJs, R: DeserializeOwned> JsFunctionThreadSafe<T, R> {
         });
         unsafe {
             Status::result(napi_call_threadsafe_function(
-                self.fun,
+                self.inner.fun.load(Ordering::Relaxed),
                 Box::into_raw(data) as *mut c_void,
                 napi_threadsafe_function_call_mode::napi_tsfn_nonblocking
             ))?;
@@ -65,7 +75,7 @@ impl<T: MultiJs, R: DeserializeOwned> JsFunctionThreadSafe<T, R> {
         });
         unsafe {
             Status::result(napi_call_threadsafe_function(
-                self.fun,
+                self.inner.fun.load(Ordering::Relaxed),
                 Box::into_raw(data) as *mut c_void,
                 napi_threadsafe_function_call_mode::napi_tsfn_nonblocking
             ))?;
@@ -74,22 +84,22 @@ impl<T: MultiJs, R: DeserializeOwned> JsFunctionThreadSafe<T, R> {
     }
 
     fn acquire(&self) -> Result<()> {
-        if !self.acquired.get() {
+        if !self.inner.acquired.load(Ordering::Relaxed) {
             unsafe {
                 Status::result(napi_acquire_threadsafe_function(
-                    self.fun
+                    self.inner.fun.load(Ordering::Relaxed)
                 ))?;
             }
-            self.acquired.set(true);
+            self.inner.acquired.store(true, Ordering::Relaxed);
         }
         Ok(())
     }
 
     fn release(&self) {
-        if self.acquired.get() {
+        if self.inner.acquired.load(Ordering::Relaxed) {
             unsafe {
                 napi_release_threadsafe_function(
-                    self.fun,
+                    self.inner.fun.load(Ordering::Relaxed),
                     napi_threadsafe_function_release_mode::napi_tsfn_release
                 );
             }
@@ -99,6 +109,8 @@ impl<T: MultiJs, R: DeserializeOwned> JsFunctionThreadSafe<T, R> {
 
 impl<T: MultiJs, R: DeserializeOwned> Drop for JsFunctionThreadSafe<T, R> {
     fn drop(&mut self) {
-        self.release();
+        if Arc::strong_count(&self.inner) == 1 {
+            self.release();
+        }
     }
 }
