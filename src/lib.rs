@@ -20,13 +20,14 @@
 #![feature(unboxed_closures)]
 #![feature(fn_traits)]
 
+/// A convenient macro to call napi functions
+/// Convert the result to a Status
 macro_rules! napi_call {
     (
         $fun:expr
     ) => {
         // Calls to napi require unsafe
-        // Convert the result to a Status
-        unsafe { Status::result($fun) }
+        Status::result(unsafe { $fun })
     }
 }
 
