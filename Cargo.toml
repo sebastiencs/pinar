@@ -29,7 +29,7 @@ napi-sys = { version = "0.1", package = "pinar-napi-sys" }
 
 serde = { version = "1.*", optional = true }
 serde_derive = { version = "1.*", optional = true }
-pinar-derive = { path = "/home/sebastien/travaux/pinar-derive", optional = true }
+pinar-derive = { version = "0.2", optional = true }
 
 linkme = "0.1"
 derive_more = "0.15.0"
