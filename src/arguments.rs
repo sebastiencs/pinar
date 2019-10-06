@@ -141,6 +141,16 @@ impl FromArguments for serde_json::Value
     }
 }
 
+impl FromArguments for Value
+{
+    fn from_args(args: &Arguments) -> Result<Self> {
+        match args.next_arg() {
+            Some(value) => Ok(value.get_value()),
+            _ => Err(ArgumentsError::missing(args.arg_number()))
+        }
+    }
+}
+
 impl FromArguments for Env {
     fn from_args(args: &Arguments) -> Result<Self> {
         Ok(args.env)
