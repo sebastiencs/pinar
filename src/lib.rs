@@ -1,15 +1,15 @@
 //#![feature(associated_type_defaults)]
 //#![feature(optin_builtin_traits)]
-//#![feature(specialization)]
+// #![feature(specialization)]
 //#![feature(tool_lints)]
-#![cfg_attr(
-    feature = "nightly",
-    feature(core_intrinsics, unsized_locals)
-)]
+// #![cfg_attr(
+//     feature = "nightly",
+//     feature(core_intrinsics, unsized_locals)
+// )]
 //#![feature(core_intrinsics)]
-#![feature(unsized_locals)]
-#![feature(default_type_parameter_fallback)]
-#![feature(specialization)]
+// #![feature(unsized_locals)]
+// #![feature(default_type_parameter_fallback)]
+// #![feature(specialization)]
 #![warn(
      clippy::all,
      clippy::cargo,
@@ -17,8 +17,9 @@
 //     clippy::pedantic,
 //     clippy::nursery,
 )]
-#![feature(unboxed_closures)]
-#![feature(fn_traits)]
+// #![feature(unboxed_closures)]
+// #![feature(fn_traits)]
+
 #![allow(clippy::trivially_copy_pass_by_ref)]
 
 /// A convenient macro to call napi functions
@@ -121,9 +122,6 @@ pub mod prelude {
     pub use super::pinar_serde;
 }
 
-
-
-
 use linkme::distributed_slice;
 
 #[distributed_slice]
@@ -136,142 +134,6 @@ use std::cell::RefCell;
 
 thread_local! {
     pub(crate) static BACKTRACE: RefCell<Option<backtrace::Backtrace>> = RefCell::new(None);
-}
-
-fn testfn(fun: JsFunction) {
-    fun.call((1, "seb")).ok();
-    fun.call(()).ok();
-    fun.call((234, "coucou", vec![1, 2, 3])).ok();
-    fun.call(vec![1, 2, 3]).ok();
-    fun.call("salut").ok();
-    fun.call(10).ok();
-    fun.call(Box::new(91)).ok();
-    fun.call((10, "a", 12, vec![1, 2, 3])).ok();
-    fun.call(ABC { a: 1, b: 2, c: 3, d: TestEnum::B(1), e: None }).ok();
-    fun.call((|Env| {}) as fn(Env) -> ()).ok();
-}
-
-use serde_derive::{Serialize, Deserialize};
-
-use pinar_derive::{ToJs, FromArguments};
-
-#[derive(Debug, Serialize, Deserialize)]
-enum TestEnum {
-    A(String),
-    B(usize),
-    C(Vec<usize>),
-    D(Option<usize>),
-    E(Box<usize>)
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct AR {
-    s: String
-}
-
-#[derive(Debug, Serialize, Deserialize, ToJs, FromArguments)]
-struct ABC {
-    a: i32,
-    b: i32,
-    c: i32,
-    d: TestEnum,
-    e: Option<AR>
-}
-
-fn test1(args: (Env, String)) {
-    println!("TEST1 CALLED with {}", args.1);
-}
-
-fn test2(args: (String, i64)) -> i64 {
-    println!("TEST2 CALLED with {} {}", args.0, args.1);
-    100
-}
-
-fn test3(args: (String, i64, Option<String>)) -> String {
-    println!("TEST3 CALLED with {} {} {:?}", args.0, args.1, args.2);
-    "C'est moi le boss".to_owned()
-}
-
-fn test4(args: (String, i64, Option<String>)) -> Option<String> {
-    println!("TEST4 CALLED with {} {} {:?}", args.0, args.1, args.2);
-    None
-}
-
-fn test5(args: (String, i64, Option<String>)) -> Vec<i64> {
-    println!("TEST5 CALLED with {} {} {:?}", args.0, args.1, args.2);
-    vec![1, 2, 3, 4, 5, 6]
-}
-
-fn test6(args: (String, i64, Option<String>)) -> HashMap<i64, String> {
-    println!("TEST6 CALLED with {} {} {:?}", args.0, args.1, args.2);
-    let mut map = HashMap::new();
-    map.insert(1, "coucou".to_owned());
-    map.insert(2, "salut".to_owned());
-    map.insert(3, "oklm".to_owned());
-    map
-}
-
-fn test7(args: i64) -> i64 {
-    args + 1
-}
-
-fn test8(args: Option<i64>) -> Result<Option<i64>> {
-    println!("ARGS: {:?}", args);
-    Ok(args)
-}
-
-fn test9(args: ()) -> ABC {
-    ABC {
-        a: 10,
-        b: 31,
-        c: 22,
-        d: TestEnum::E(Box::new(123)),
-        e: None
-    }
-}
-
-fn test10(_: ()) -> Box<usize> {
-    Box::new(1234)
-}
-
-fn test11<'e>(args: (JsString<'e>, JsObject)) -> JsString<'e> {
-    args.0
-}
-
-fn test12<'e>((env, s1, obj): (Env, JsString, JsObject)) -> JsString<'e> {
-    env.string("weeesh").unwrap()
-}
-
-fn test13<'e>((env, abc): (Env, ABC)) -> ABC {
-    println!("ABC: {:?}", abc);
-    abc
-    //env.string("weeesh").unwrap()
-}
-
-fn testab(args: String) {
-}
-
-fn test15<'e>(obj: JsObject) -> JsObject {
-    obj.set("wesh", (|arg| { arg }) as fn(String) -> String);
-    obj
-}
-
-// fn test16(fun: JsFunction) {
-//     //fun(("1"));
-//      fun(1);
-//     // fun(vec![1, 2, 3]);
-//     //fun();
-// }
-
-fn test17<'e>(s1: JsString, s2: JsString, vec: Vec<i64>) -> Result<()> {
-    println!("FIRST: {}", s1.to_rust()?);
-    println!("SECOND: {}", s2.to_rust()?);
-    println!("VEC: {:?}", vec);
-    Ok(())
-}
-
-fn test18() {
-    println!("OK");
 }
 
 #[doc(hidden)]
@@ -318,38 +180,3 @@ extern "C" fn __pinar_register() {
         builder.build().expect("ModuleBuilder")
     }
 }
-
-
-//use crate::classes::SomeClass;
-//use crate::classes::ClassBuilder;
-
-// register_module!(|module: ModuleBuilder| {
-//     module.with_function("test1", test1)
-//           .with_function("my_super_function", test2)
-//           .with_function("my_other_function", test3)
-//           .with_function("test4", test4)
-//           .with_function("test5", test5)
-//           .with_function("test6", test6)
-//           .with_function("test7", test7)
-//           .with_function("test8", test8)
-//           .with_function("test9", test9)
-//           .with_function("test10", test10)
-//           .with_function("test11", test11)
-//           .with_function("test12", test12)
-//           .with_function("test13", test13)
-//           .with_function("test14", |()| {
-//               1234
-//           })
-//           .with_function("test15", test15)
-// //          .with_function("test16", test16)
-//           .with_function("test17", test17)
-//           .with_function("test17", test18)
-//           .with_class("someclass", || {
-//               ClassBuilder::<SomeClass>::start_build()
-//                   .with_method("easy", SomeClass::jsfunction)
-//                   .with_method("easy2", SomeClass::jsother)
-//                   .with_accessor("easy3", SomeClass::jsaccessor)
-//                   // .with_accessor("easy4", SomeClass::jsbox)
-//           })
-//           .build()
-// });
