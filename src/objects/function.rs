@@ -53,7 +53,7 @@ impl<'e> JsFunction<'e> {
         Ok(JsObject::from(result))
     }
 
-    pub fn make_threadsafe<T: MultiJs, R: DeserializeOwned>(&self) -> Result<JsFunctionThreadSafe<T, R>> {
+    pub fn make_threadsafe<T: MultiJs + 'static, R: DeserializeOwned>(&self) -> Result<JsFunctionThreadSafe<T, R>> {
         let mut result: napi_threadsafe_function = std::ptr::null_mut();
 
         let resource_name = "rust_threadsafe_function".to_js(self.value.env)?;
@@ -64,7 +64,6 @@ impl<'e> JsFunction<'e> {
                 self.value.get(),
                 std::ptr::null_mut(),
                 resource_name.get_value().get(),
-//                std::ptr::null_mut(),
                 0,
                 1,
                 std::ptr::null_mut(),
@@ -74,7 +73,7 @@ impl<'e> JsFunction<'e> {
                 &mut result
             ))?;
         }
-        Ok(JsFunctionThreadSafe::<T, R>::new(result))
+        JsFunctionThreadSafe::<T, R>::new(result)
     }
 }
 
@@ -89,7 +88,7 @@ fn display_exception(env: Env) {
     env.error(("An exception occured with a threadsafe function:\n", result));
 }
 
-unsafe extern "C" fn __pinar_threadsafe_function<T: MultiJs, R: DeserializeOwned>(
+pub(crate) unsafe extern "C" fn __pinar_threadsafe_function<T: MultiJs + 'static, R: DeserializeOwned>(
     env: napi_env,
     js_callback: napi_value,
     _context: *mut ::std::os::raw::c_void,
@@ -104,6 +103,9 @@ unsafe extern "C" fn __pinar_threadsafe_function<T: MultiJs, R: DeserializeOwned
         let result = match fun.call(*args) {
             Ok(result) => result,
             Err(e) => {
+                // if let Some(Status::PendingException) = e.is_type::<Status>() {
+                //     display_exception(env);
+                // };
                 if let Some(Status::PendingException) = e.downcast_ref::<Status>() {
                     display_exception(env);
                 };
