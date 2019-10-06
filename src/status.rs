@@ -1,43 +1,44 @@
 use napi_sys::*;
-use failure::Fail;
 
-#[derive(Fail, Debug)]
+use derive_more::Display;
+
+#[derive(Display, Debug)]
 pub enum Status {
-    #[fail(display = "Ok.")]
+    #[display(fmt = "Ok.")]
     Ok,
-    #[fail(display = "Invalid argument.")]
+    #[display(fmt = "Invalid argument.")]
     InvalidArg,
-    #[fail(display = "Object expected.")]
+    #[display(fmt = "Object expected.")]
     ObjectExpected,
-    #[fail(display = "String expected.")]
+    #[display(fmt = "String expected.")]
     StringExpected,
-    #[fail(display = "Name expected.")]
+    #[display(fmt = "Name expected.")]
     NameExpected,
-    #[fail(display = "Function expected.")]
+    #[display(fmt = "Function expected.")]
     FunctionExpected,
-    #[fail(display = "Number expected.")]
+    #[display(fmt = "Number expected.")]
     NumberExpected,
-    #[fail(display = "Boolean expected.")]
+    #[display(fmt = "Boolean expected.")]
     BooleanExpected,
-    #[fail(display = "Array expected.")]
+    #[display(fmt = "Array expected.")]
     ArrayExpected,
-    #[fail(display = "Generic failure.")]
+    #[display(fmt = "Generic failure.")]
     GenericFailure,
-    #[fail(display = "Pending exception.")]
+    #[display(fmt = "Pending exception.")]
     PendingException,
-    #[fail(display = "Cancelled.")]
+    #[display(fmt = "Cancelled.")]
     Cancelled,
-    #[fail(display = "Escape called twice.")]
+    #[display(fmt = "Escape called twice.")]
     EscapeCalledTwice,
-    #[fail(display = "Handle Ccsope mismatch.")]
+    #[display(fmt = "Handle Ccsope mismatch.")]
     HandleCcopeMismatch,
-    #[fail(display = "Callback scope mismatch.")]
+    #[display(fmt = "Callback scope mismatch.")]
     CallbackScopeMismatch,
-    #[fail(display = "Queue full.")]
+    #[display(fmt = "Queue full.")]
     QueueFull,
-    #[fail(display = "Closing.")]
+    #[display(fmt = "Closing.")]
     Closing,
-    #[fail(display = "Bigint expected.")]
+    #[display(fmt = "Bigint expected.")]
     BigintExpected,
 }
 

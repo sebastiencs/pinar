@@ -1,10 +1,13 @@
 use crate::status::Status;
-use failure::{Fail, Backtrace};
+
+use backtrace::Backtrace;
+
+use derive_more::Display;
 
 #[derive(Debug)]
 pub struct Error {
     cause: Box<JsError>,
-    backtrace: Option<Backtrace>
+    backtrace: Option<Backtrace>,
 }
 
 impl Error {
@@ -13,66 +16,63 @@ impl Error {
     }
 
     pub fn backtrace(&self) -> &Backtrace {
-        match self.cause.backtrace() {
-            Some(bt) => bt,
-            _ => self.backtrace.as_ref().unwrap()
-        }
+        self.backtrace.as_ref().unwrap()
     }
 
-    pub fn downcast_ref<T: Fail>(&self) -> Option<&T> {
-        Fail::downcast_ref(self.cause.as_fail())
+    pub fn is_type<T: 'static>(&self) -> bool {
+         self.cause.type_id() == TypeId::of::<T>()
     }
 
-    pub fn is_type<T: Fail>(&self) -> bool {
-        self.downcast_ref::<T>().is_some()
+    pub fn downcast_ref<T: 'static>(&self) -> Option<&T> {
+        self.cause.as_any().downcast_ref::<T>()
     }
 }
 
-#[derive(Fail, Debug)]
-#[fail(display = "Null pointer on external data")]
+#[derive(Display, Debug)]
+#[display(fmt = "Null pointer on external data")]
 pub(crate) struct JsExternalError;
 
-#[derive(Fail, Debug)]
+#[derive(Display, Debug)]
 pub(crate) enum JsClassError {
-    #[fail(display = "Fail to extract external value from class. Please report on pinar repo.")]
+    #[display(fmt = "Fail to extract external value from class. Please report on pinar repo.")]
     ExternalClassData,
-    #[fail(display = "Wrong handler class. Please report on pinar repo.")]
+    #[display(fmt = "Wrong handler class. Please report on pinar repo.")]
     WrongHandler,
-    #[fail(display = "A class method has been called with the wrong class. Check your JS !")]
+    #[display(fmt = "A class method has been called with the wrong class. Check your JS !")]
     WrongClass,
-    #[fail(display = "Wrong 'this' value. Did you call the constructor with 'new' ? (ex: 'let a = new {}()')", _0)]
+    #[display(fmt = "Wrong 'this' value. Did you call the constructor with 'new' ? (ex: 'let a = new {}()')", _0)]
     ThisConstructor(&'static str),
-    #[fail(display = "Wrong 'this' value on a method call of the class {}", _0)]
+    #[display(fmt = "Wrong 'this' value on a method call of the class {}", _0)]
     ThisMethod(&'static str),
-    #[fail(display = "Constructor of the class {} is not defined", _0)]
+    #[display(fmt = "Constructor of the class {} is not defined", _0)]
     NoConstructor(&'static str),
-    #[fail(display = "Fail to unwrap the class. Please report on pinar repo.")]
+    #[display(fmt = "Fail to unwrap the class. Please report on pinar repo.")]
     Unwrap,
 }
 
-#[derive(Fail, Debug)]
+#[derive(Display, Debug)]
 pub(crate) enum JsFunctionError {
-    #[fail(display = "Multiple overload of the function {} failed.", _0)]
+    #[display(fmt = "Multiple overload of the function {} failed.", _0)]
     ArgumentsOverload(String),
-//    #[fail(display = "{{ function {} }}: {}.", _0, _1)]
+//    #[display(fmt = "{{ function {} }}: {}.", _0, _1)]
 //    Arguments(String, String),
-    #[fail(display = "Fail to dispatch the function, please report on pinar repo.")]
+    #[display(fmt = "Fail to dispatch the function, please report on pinar repo.")]
     WrongFunctionData,
 }
 
-#[derive(Fail, Debug, Clone)]
+#[derive(Display, Debug, Clone)]
 pub enum ArgumentsError {
-    #[fail(display = "{}th argument is missing", _0)]
+    #[display(fmt = "{}th argument is missing", _0)]
     Missing(usize),
-    #[fail(display = "Wrong type, expected a {} on the {}th argument", _0, _1)]
+    #[display(fmt = "Wrong type, expected a {} on the {}th argument", _0, _1)]
     WrongType(String, usize),
-    #[fail(display = "Deserialization error: {}", _0)]
+    #[display(fmt = "Deserialization error: {}", _0)]
     Deserialization(String)
 }
 
-#[derive(Fail, Debug, Clone)]
+#[derive(Display, Debug, Clone)]
 pub enum JsAnyError {
-    #[fail(display = "Wrong conversion from a JsAny")]
+    #[display(fmt = "Wrong conversion from a JsAny")]
     WrongAny,
 }
 
@@ -86,33 +86,36 @@ impl ArgumentsError {
     }
 }
 
-impl<T: JsError> From<T> for Error {
+impl<T: JsError + 'static> From<T> for Error {
     fn from(error: T) -> Error {
         Error {
-            backtrace: match error.backtrace() {
-                None => Some(Backtrace::new()),
-                _ => None
-            },
-            cause: Box::new(error)
+            backtrace: Some(Backtrace::new()),
+            cause: Box::new(error),
         }
     }
 }
 
-pub trait JsError: Fail + JsErrorAsFail {
+use std::any::TypeId;
+use std::any::Any;
+
+pub trait JsError: JsErrorAsAny + std::fmt::Display + std::fmt::Debug + 'static {
     fn get_msg(&self) -> String {
         format!("{}", self)
     }
     fn get_code(&self) -> Option<String> {
         None
     }
+    fn type_id(&self) -> TypeId {
+        TypeId::of::<Self>()
+    }
 }
 
-pub trait JsErrorAsFail {
-    fn as_fail(&self) -> &Fail;
+pub trait JsErrorAsAny {
+    fn as_any(&self) -> &dyn Any;
 }
 
-impl<T: JsError> JsErrorAsFail for T {
-    fn as_fail(&self) -> &Fail {
+impl<T: JsError> JsErrorAsAny for T {
+    fn as_any(&self) -> &dyn Any {
         self
     }
 }
