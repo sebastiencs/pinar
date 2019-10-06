@@ -94,7 +94,7 @@ pub mod prelude {
     pub use crate::function_threadsafe::JsFunctionThreadSafe;
     pub use crate::module::ModuleBuilder;
     pub use crate::property_descriptor::PropertyDescriptor;
-    pub use crate::jsreturn::JsReturn;
+    pub use crate::jsreturn::{JsReturn, JsReturnRef};
     //pub use crate::module::__pinar_dispatch_function;
     pub use crate::arguments::{FromArguments, Arguments};
     pub use crate::classes::{JsClass, AsJsClass, ClassBuilder};
@@ -102,7 +102,7 @@ pub mod prelude {
     #[cfg(feature = "pinar-serde")]
     pub use crate::pinar_serde::ser::serialize_to_js;
     #[cfg(feature = "pinar-serde")]
-    pub use pinar_derive::{ToJs, FromArguments, export};
+    pub use pinar_derive::Pinar;
     // #[cfg(feature = "pinar-serde")]
     // pub use pinar_derive;
     // #[cfg(feature = "pinar-serde")]
@@ -110,7 +110,7 @@ pub mod prelude {
     // pub use super::register_module;
     #[doc(hidden)]
     pub use napi_sys::{napi_env, napi_value};
-    pub use crate::error::ArgumentsError;
+    pub use crate::error::{ArgumentsError, JsAnyError};
 
     pub use linkme::distributed_slice;
     pub use linkme;
