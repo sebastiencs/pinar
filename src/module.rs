@@ -105,18 +105,20 @@ pub(crate) extern "C" fn __pinar_dispatch_function(env: napi_env, info: napi_cal
 
         for function in &function.functions {
             let result = function.as_ref().handle(&args);
-            if let Err(ref e) = result {
-                if let Some(e) = e.downcast_ref::<ArgumentsError>() {
-                    last_error = Some(e.clone());
-                    continue;
-                };
-            };
+            if result.is_err() {
+                // if let Some(e) = e.downcast_ref::<ArgumentsError>() {
+                //     last_error = Some(e.clone());
+                //     continue;
+                // };
+                last_error = Some(result.unwrap_err());
+                continue;
+            }
             return result;
         }
 
         return match function.functions.len() {
             0 => Err(JsFunctionError::WrongFunctionData.into()),
-            1 if last_error.is_some() => Err(last_error.unwrap().into()),
+            1 if last_error.is_some() => Err(last_error.unwrap()),
             _ => Err(JsFunctionError::ArgumentsOverload(function.name.clone()).into())
         };
     })
