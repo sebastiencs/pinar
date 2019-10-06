@@ -14,6 +14,12 @@ pub struct DeserializeError {
     msg: String
 }
 
+impl crate::error::JsError for DeserializeError {
+    fn get_msg(&self) -> String {
+        format!("DeserializeError {}", self.msg)
+    }
+}
+
 impl DeserializeError {
     fn new<M: AsRef<str>>(msg: M) -> DeserializeError {
         let msg = msg.as_ref();
