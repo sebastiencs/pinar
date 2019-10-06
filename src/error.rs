@@ -7,7 +7,7 @@ use derive_more::Display;
 #[derive(Debug)]
 pub struct Error {
     cause: Box<JsError>,
-    backtrace: Option<Backtrace>,
+    backtrace: Backtrace,
 }
 
 impl Error {
@@ -16,7 +16,7 @@ impl Error {
     }
 
     pub fn backtrace(&self) -> &Backtrace {
-        self.backtrace.as_ref().unwrap()
+        &self.backtrace
     }
 
     pub fn is_type<T: 'static>(&self) -> bool {
@@ -89,7 +89,7 @@ impl ArgumentsError {
 impl<T: JsError + 'static> From<T> for Error {
     fn from(error: T) -> Error {
         Error {
-            backtrace: Some(Backtrace::new()),
+            backtrace: Backtrace::new(),
             cause: Box::new(error),
         }
     }

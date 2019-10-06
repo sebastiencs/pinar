@@ -130,6 +130,12 @@ pub static PINAR_CLASSES: [fn(&mut ModuleBuilder)] = [..];
 #[distributed_slice]
 pub static PINAR_FUNCTIONS: [fn(&mut ModuleBuilder)] = [..];
 
+use std::cell::RefCell;
+
+thread_local! {
+    pub(crate) static BACKTRACE: RefCell<Option<backtrace::Backtrace>> = RefCell::new(None);
+}
+
 fn testfn(fun: JsFunction) {
     fun.call((1, "seb")).ok();
     fun.call(()).ok();
@@ -289,6 +295,14 @@ extern "C" fn __pinar_register() {
     unsafe { napi_module_register(&mut MODULE_DESCRIPTOR) };
 
     extern "C" fn init_module(env: napi_env, export: napi_value) -> napi_value {
+
+        std::panic::set_hook(Box::new(|_info| {
+            let bt = backtrace::Backtrace::new();
+            BACKTRACE.with(move |bt_ref| {
+                *bt_ref.borrow_mut() = Some(bt);
+            });
+        }));
+
         let mut builder = ModuleBuilder::new(env, export);
 
         for initializer in PINAR_CLASSES {

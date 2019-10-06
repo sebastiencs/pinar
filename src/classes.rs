@@ -58,16 +58,22 @@ where
     match std::panic::catch_unwind(closure) {
         Ok(Ok(Some(v))) => v,
         Ok(Ok(None)) => std::ptr::null_mut(),
-        Ok(Err(e)) => {
+        Ok(Err(error)) => {
             let env = Env::from(env);
-            let e = e.as_js_error();
-            env.throw_error(e.get_msg(), e.get_code()).ok();
+            let e = error.as_js_error();
+            env.throw_error(format!("{}\n{:?}", e.get_msg(), error.backtrace()), e.get_code()).ok();
             std::ptr::null_mut()
         }
         Err(e) => {
+            use backtrace::Backtrace;
+
             let env = Env::from(env);
-            env.throw_error(format!("Rust has panicked ! {:?}", e),
+            let bt = crate::BACKTRACE.with(|bt| { bt.borrow_mut().take() })
+                .unwrap_or_else(|| Backtrace::new());
+
+            env.throw_error(format!("Rust has panicked ! {:?}", bt),
                             Some("PINAR".to_owned())).ok();
+
             std::ptr::null_mut()
         }
     }
