@@ -11,6 +11,11 @@ pub struct JsObject<'e> {
 }
 
 impl<'e> JsObject<'e> {
+    #[doc(hidden)]
+    pub fn env(&self) -> Env {
+        self.value.env
+    }
+
     pub fn set<K, V>(&self, key: K, value: V) -> Result<()>
     where
         K: KeyProperty + ToJs<'e>,

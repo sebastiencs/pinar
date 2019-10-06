@@ -7,6 +7,7 @@ use crate::status::Status;
 use crate::value::ValueType;
 use crate::to_rust::ToRust;
 use crate::error::JsAnyError;
+use crate::env::Env;
 
 mod array;
 mod external;
@@ -159,6 +160,23 @@ impl<'e> JsAny<'e> {
             JsAny::Null(e) => JsAny::Null(e.clone()),
             JsAny::Boolean(e) => JsAny::Boolean(e.clone()),
             JsAny::BigInt(e) => JsAny::BigInt(e.clone()),
+        }
+    }
+
+    #[inline]
+    pub(crate) fn env(&self) -> Env {
+        match self {
+            JsAny::String(s) => s.value.env,
+            JsAny::Object(s) => s.value.env,
+            JsAny::Array(s) => s.value.env,
+            JsAny::Number(s) => s.value.env,
+            JsAny::Symbol(s) => s.value.env,
+            JsAny::External(s) => s.value.env,
+            JsAny::Function(s) => s.value.env,
+            JsAny::Undefined(s) => s.value.env,
+            JsAny::Null(s) => s.value.env,
+            JsAny::Boolean(s) => s.value.env,
+            JsAny::BigInt(s) => s.value.env,
         }
     }
 
