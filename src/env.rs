@@ -45,7 +45,7 @@ impl Env {
         Env { env }
     }
 
-    pub fn log<'e>(&self, args: impl MultiJs) -> Result<()> {
+    pub fn log(&self, args: impl MultiJs) -> Result<()> {
         let log = self.global()?
                       .get("console")?
                       .as_jsobject()?
@@ -56,7 +56,7 @@ impl Env {
         Ok(())
     }
 
-    pub fn error<'e>(&self, args: impl MultiJs) -> Result<()> {
+    pub fn error(&self, args: impl MultiJs) -> Result<()> {
         let error = self.global()?
                         .get("console")?
                         .as_jsobject()?

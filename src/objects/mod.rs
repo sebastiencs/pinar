@@ -1,7 +1,7 @@
 
 use std::ops::Deref;
 use std::marker::PhantomData;
-use napi_sys::*;
+
 use crate::Result;
 use crate::status::Status;
 use crate::value::ValueType;

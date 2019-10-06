@@ -109,7 +109,7 @@ impl<'e> JsReturnRef<'e> for ()
 {
     type Value = Value;
     type Error = Error;
-    fn get_result_from_ref(&self, env: Env) -> Result<Option<Value>, Self::Error> {
+    fn get_result_from_ref(&self, _env: Env) -> Result<Option<Value>, Self::Error> {
         Ok(None)
     }
 }

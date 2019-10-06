@@ -19,6 +19,7 @@
 )]
 #![feature(unboxed_closures)]
 #![feature(fn_traits)]
+#![allow(clippy::trivially_copy_pass_by_ref)]
 
 /// A convenient macro to call napi functions
 /// Convert the result to a Status
@@ -32,9 +33,9 @@ macro_rules! napi_call {
 }
 
 //use crate::arguments::{Arguments, FromArguments};
-use crate::error::ArgumentsError;
+
 //use crate::module::__pinar_dispatch_function;
-use std::collections::HashMap;
+
 use napi_sys::*;
 //use crate::module::ModuleBuilder;
 use crate::objects::*;
@@ -121,7 +122,7 @@ pub mod prelude {
 }
 
 
-use crate::pinar_serde::ser::serialize_to_js;
+
 
 use linkme::distributed_slice;
 

@@ -104,7 +104,7 @@ where
     type Value = JsObject<'e>;
     fn to_js(&self, env: Env) -> Result<JsObject<'e>> {
         let object = env.object()?;
-        for (key, value) in self.into_iter() {
+        for (key, value) in self.iter() {
             object.set_ref(key, value)?;
         }
         Ok(object)
@@ -144,7 +144,7 @@ where
     type Value = JsArray<'e>;
     fn to_js(&self, env: Env) -> Result<JsArray<'e>> {
         let array = env.array_with_capacity(self.len())?;
-        for (index, value) in self.into_iter().enumerate() {
+        for (index, value) in self.iter().enumerate() {
             array.set_ref(index as u32, value)?;
         }
         Ok(array)

@@ -6,12 +6,12 @@ use derive_more::Display;
 
 #[derive(Debug)]
 pub struct Error {
-    cause: Box<JsError>,
+    cause: Box<dyn JsError>,
     backtrace: Backtrace,
 }
 
 impl Error {
-    pub fn as_js_error(&self) -> &JsError {
+    pub fn as_js_error(&self) -> &dyn JsError {
         self.cause.as_ref()
     }
 

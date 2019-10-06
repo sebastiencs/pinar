@@ -1,7 +1,7 @@
 
 //use crate::IntoHandle;
 use crate::classes::execute_safely;
-use crate::error::ArgumentsError;
+
 use crate::error::JsFunctionError;
 use napi_sys::*;
 use crate::arguments::Arguments;
@@ -21,7 +21,7 @@ pub struct ModuleBuilder<'e>
 }
 
 pub(crate) struct ModuleFunction {
-    pub(crate) functions: Vec<Box<CallbackHandler>>,
+    pub(crate) functions: Vec<Box<dyn CallbackHandler>>,
     name: String
 }
 
@@ -116,11 +116,11 @@ pub(crate) extern "C" fn __pinar_dispatch_function(env: napi_env, info: napi_cal
             return result;
         }
 
-        return match function.functions.len() {
+        match function.functions.len() {
             0 => Err(JsFunctionError::WrongFunctionData.into()),
             1 if last_error.is_some() => Err(last_error.unwrap()),
             _ => Err(JsFunctionError::ArgumentsOverload(function.name.clone()).into())
-        };
+        }
     })
 }
 
@@ -129,7 +129,7 @@ where
     A: FromArguments,
     R: for<'env> JsReturn<'env>
 {
-    fun: Box<Fn(A) -> R>
+    fun: Box<dyn Fn(A) -> R>
 }
 
 impl<A, R> Callback<A, R>

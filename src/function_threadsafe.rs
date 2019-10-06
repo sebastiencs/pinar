@@ -2,8 +2,8 @@
 use std::convert::TryFrom;
 use std::ffi::c_void;
 use std::marker::PhantomData;
-use std::cell::Cell;
-use std::sync::atomic::{AtomicPtr, AtomicBool, Ordering};
+
+use std::sync::atomic::{AtomicPtr, Ordering};
 use std::sync::Arc;
 use std::sync::mpsc::{sync_channel, SyncSender};
 use napi_sys::*;
@@ -81,7 +81,7 @@ where
     }
 
     fn release(&self) {
-        napi_call!(napi_release_threadsafe_function(
+        let _ = napi_call!(napi_release_threadsafe_function(
             self.fun.load(Ordering::Relaxed),
             napi_threadsafe_function_release_mode::napi_tsfn_release
         ));
@@ -137,7 +137,7 @@ fn display_exception(env: Env) {
     unsafe {
         napi_get_and_clear_last_exception(env.env(), result.get_mut());
     }
-    env.error(("An exception occured with a threadsafe function:\n", result));
+    let _ = env.error(("An exception occured with a threadsafe function:\n", result));
 }
 
 extern "C" fn __pinar_threadsafe_function<T, R>(

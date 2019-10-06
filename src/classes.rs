@@ -1,5 +1,4 @@
 
-use crate::error::{JsError, Error};
 use std::rc::Rc;
 use std::ffi::c_void;
 use napi_sys::*;
@@ -14,7 +13,7 @@ pub trait JsClass : Sized + 'static {
     const CLASSNAME: &'static str;
     type ArgsConstructor: FromArguments;
 
-    fn constructor(args: Self::ArgsConstructor) -> Result<Self> {
+    fn constructor(_args: Self::ArgsConstructor) -> Result<Self> {
         Err(JsClassError::NoConstructor(Self::CLASSNAME).into())
     }
 
@@ -64,12 +63,12 @@ where
             env.throw_error(format!("{}\n{:?}", e.get_msg(), error.backtrace()), e.get_code()).ok();
             std::ptr::null_mut()
         }
-        Err(e) => {
+        Err(_) => {
             use backtrace::Backtrace;
 
             let env = Env::from(env);
             let bt = crate::BACKTRACE.with(|bt| { bt.borrow_mut().take() })
-                .unwrap_or_else(|| Backtrace::new());
+                .unwrap_or_else(Backtrace::new);
 
             env.throw_error(format!("Rust has panicked ! {:?}", bt),
                             Some("PINAR".to_owned())).ok();
@@ -173,7 +172,7 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
 struct JsClassData<C: JsClass> {
     id: TypeId,
     args_rust: Option<C::ArgsConstructor>,
-    methods: Vec<Rc<ClassMethodHandler<C>>>,
+    methods: Vec<Rc<dyn ClassMethodHandler<C>>>,
     instance: Option<C>
 }
 
@@ -196,8 +195,8 @@ pub struct ClassBuilder<C: JsClass> {
 
 struct ClassProperty<C: JsClass> {
     name: CString,
-    method: Option<Rc<ClassMethodHandler<C>>>,
-    accessor: Option<Rc<ClassMethodHandler<C>>>,
+    method: Option<Rc<dyn ClassMethodHandler<C>>>,
+    accessor: Option<Rc<dyn ClassMethodHandler<C>>>,
 }
 
 impl<C: JsClass + 'static> ClassProperty<C> {
@@ -344,9 +343,9 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
     }
 }
 
-pub struct SomeClass {
-    number: i64
-}
+// pub struct SomeClass {
+//     number: i64
+// }
 
 // TODO: Use https://github.com/rust-lang/rust/pull/55986
 //       when it reaches stable
@@ -406,7 +405,7 @@ where
     A: FromArguments,
     R: for <'env> JsReturn<'env>
 {
-    fun: Box<Fn(&mut C, A) -> R>,
+    fun: Box<dyn Fn(&mut C, A) -> R>,
 }
 
 impl<C, A, R> ClassMethod<C, A, R>
@@ -452,76 +451,76 @@ impl<C> AsJsClass<C>
 where
      C: JsClass
 {
-    pub(crate) fn to_js_class<'e>(self, env: Env) -> Result<Value> {
+    pub(crate) fn to_js_class(self, env: Env) -> Result<Value> {
         ClassBuilder::from_instance(env, self.0).map(|c| c.get_value())
     }
 }
 
-impl JsClass for SomeClass {
-    const CLASSNAME: &'static str = "RustClass";
-    type ArgsConstructor = (String, i64);
+// impl JsClass for SomeClass {
+//     const CLASSNAME: &'static str = "RustClass";
+//     type ArgsConstructor = (String, i64);
 
-    // fn constructor(arg: Self::ArgsConstructor) -> Result<Self> {
-    //     Ok(SomeClass {
-    //         number: arg.1
-    //     })
-    // }
+//     // fn constructor(arg: Self::ArgsConstructor) -> Result<Self> {
+//     //     Ok(SomeClass {
+//     //         number: arg.1
+//     //     })
+//     // }
 
-    // fn default_properties(builder: ClassBuilder<Self>) -> ClassBuilder<Self> {
-    //     builder.with_method("easy", SomeClass::jsfunction)
-    //            .with_method("easy2", SomeClass::jsother)
-    //            .with_method("real", SomeClass::real)
-    //            .with_method("real2", SomeClass::real2)
-    //            .with_method("none", SomeClass::none)
-    //            .with_method("other2", SomeClass::other2)
-    //            .with_method("obj", SomeClass::obj)
-    //            .with_accessor("easy3", SomeClass::jsaccessor)
-    // }
-}
+//     // fn default_properties(builder: ClassBuilder<Self>) -> ClassBuilder<Self> {
+//     //     builder.with_method("easy", SomeClass::jsfunction)
+//     //            .with_method("easy2", SomeClass::jsother)
+//     //            .with_method("real", SomeClass::real)
+//     //            .with_method("real2", SomeClass::real2)
+//     //            .with_method("none", SomeClass::none)
+//     //            .with_method("other2", SomeClass::other2)
+//     //            .with_method("obj", SomeClass::obj)
+//     //            .with_accessor("easy3", SomeClass::jsaccessor)
+//     // }
+// }
 
-impl SomeClass {
-    pub fn none(&mut self) {
-        println!("coucou");
-    }
-    pub fn real(&mut self, a: String) {
-        println!("coucou {}", a);
-    }
-    pub fn real2(&mut self, a: (String, i64)) {
-        println!("coucou {:?}", a);
-    }
-    pub fn other(&mut self, a: u64, b: u64) {
-        println!("coucou {} {}", a, b);
-    }
+// impl SomeClass {
+//     pub fn none(&mut self) {
+//         println!("coucou");
+//     }
+//     pub fn real(&mut self, a: String) {
+//         println!("coucou {}", a);
+//     }
+//     pub fn real2(&mut self, a: (String, i64)) {
+//         println!("coucou {:?}", a);
+//     }
+//     pub fn other(&mut self, a: u64, b: u64) {
+//         println!("coucou {} {}", a, b);
+//     }
 
-    pub fn other2(&mut self, a: i64, b: i64) {
-        println!("coucou {} {}", a, b);
-    }
+//     pub fn other2(&mut self, a: i64, b: i64) {
+//         println!("coucou {} {}", a, b);
+//     }
 
-    pub fn obj<'e>(&mut self, env: Env) -> JsBoolean<'e> {
-        env.boolean(true).unwrap()
-    }
+//     pub fn obj<'e>(&mut self, env: Env) -> JsBoolean<'e> {
+//         env.boolean(true).unwrap()
+//     }
 
-    pub fn jsfunction(&mut self, _s: String, _i: i64) -> String {
-        println!("FROM JSFUNCTION {} {:x?}", self.number, self as *const SomeClass);
-        "weeesh".to_owned()
-    }
-    pub fn jsother(&mut self, _s: String, _i: i64) -> i64 {
-        println!("FROM JSOTHER", );
-        93
-    }
-    pub fn jsaccessor(&mut self, _args: Option<String>) -> i64 {
-        123456
-    }
-    pub fn jsbox(&self, _args: Option<String>) -> Box<i64> {
-        Box::new(64)
-    }
-}
+//     pub fn jsfunction(&mut self, _s: String, _i: i64) -> String {
+//         println!("FROM JSFUNCTION {} {:x?}", self.number, self as *const SomeClass);
+//         "weeesh".to_owned()
+//     }
+//     pub fn jsother(&mut self, _s: String, _i: i64) -> i64 {
+//         println!("FROM JSOTHER", );
+//         93
+//     }
+//     pub fn jsaccessor(&mut self, _args: Option<String>) -> i64 {
+//         123456
+//     }
+//     pub fn jsbox(&self, _args: Option<String>) -> Box<i64> {
+//         Box::new(64)
+//     }
+// }
 
-fn test(env: Env) -> Result<()> {
-    //    ClassBuilder::<SomeClass>::start_build();
+// fn test(env: Env) -> Result<()> {
+//     //    ClassBuilder::<SomeClass>::start_build();
 
-    SomeClass::new_instance(env, (String::from("seb"), 2))?;
+//     SomeClass::new_instance(env, (String::from("seb"), 2))?;
 
-    let _class = ClassBuilder::<SomeClass>::new_instance(env, (String::from("seb"), 2))?;
-    Ok(())
-}
+//     let _class = ClassBuilder::<SomeClass>::new_instance(env, (String::from("seb"), 2))?;
+//     Ok(())
+// }

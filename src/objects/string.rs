@@ -25,6 +25,10 @@ impl<'e> JsString<'e> {
 
         Ok(length)
     }
+
+    pub fn is_empty(&self) -> Result<bool> {
+        Ok(self.len()? == 0)
+    }
 }
 
 impl<'e> std::fmt::Display for JsString<'e> {
