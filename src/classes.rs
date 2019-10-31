@@ -9,8 +9,62 @@ use crate::prelude::*;
 use crate::error::JsClassError;
 use crate::Result;
 
+/// Trait to implement to create a Javascript class.
+///
+/// This trait is implemented with the attribute macro [`pinar`] applied on implementations.
+///
+/// # Example
+///
+/// ```
+/// struct MyStruct {
+///     num: i64
+/// }
+///
+/// #[pinar]
+/// impl MyStruct {
+///     fn constructor(num: i64, num2: i64) -> JsResult<MyStruct> {
+///         Ok(MyStruct { num: num + num2 })
+///     }
+///     fn my_method(&self) -> &i64 {
+///         &self.num
+///     }
+///     fn my_other_method(&mut self, fun: JsFunction) -> JsResult<()> {
+///         self.num = fun.call(())?.as_jsnumber()?.to_rust()?;
+///         Ok(())
+///     }
+/// }
+///
+/// // The type MyStruct is now a class in JS, it implements the trait `JsClass`.
+/// // It has a constructor and 2 other methods: my_method and my_other_method
+///
+/// // From javascript:
+///
+/// // const rust = require("./native");
+/// // 
+/// // const instance = new rust.MyStruct(1, 2);
+/// // instance.my_method() // 3
+/// ```
+/// You can instantiate a JS class from Rust:
+/// ```
+/// #[pinar]
+/// fn my_func(env: Env) -> JsResult<()> {
+///     let js_instance: JsObject = MyStruct::new_instance(env, (3, 4))?;
+///
+///     let res: i64 = js_instance.get("my_method")?
+///                               .as_jsfunction()?
+///                               .call(())?
+///                               .as_jsnumber()?
+///                               .to_rust()?;
+///     // res == 7
+///     Ok(())
+/// }
+/// ```
+
+/// [`pinar`]: ./attr.pinar.html
 pub trait JsClass : Sized + 'static {
+    /// A string naming the class in javascript.
     const CLASSNAME: &'static str;
+    /// Arguments type of the class constructor.
     type ArgsConstructor: FromArguments;
 
     fn constructor(_args: Self::ArgsConstructor) -> Result<Self> {
@@ -26,11 +80,17 @@ pub trait JsClass : Sized + 'static {
     }
 }
 
+/// Private trait implemented on types that implement `JsClass`
 trait JsClassInternal {
     const CLASS_DATA: &'static str;
     const PINAR_CLASS_ID: &'static str;
 
+    /// Function to construct the js class
     extern "C" fn __pinar_class_constructor(env: napi_env, cb_info: napi_callback_info) -> napi_value;
+
+    /// Function called when any method of the class is called from js.
+    ///
+    /// It is responsible of converting values from/to JS and call the appropriate Rust method.
     extern "C" fn __pinar_class_dispatch(env: napi_env, cb_info: napi_callback_info) -> napi_value;
 }
 
@@ -48,7 +108,8 @@ extern "C" fn __pinar_nop(_env: napi_env, _cb_info: napi_callback_info) -> napi_
     std::ptr::null_mut()
 }
 
-#[inline]
+/// Run Rust code and handle result correctly.
+#[inline(always)]
 pub(crate) fn execute_safely<F>(env: napi_env, closure: F) -> napi_value
 where
     F: Fn() -> Result<Option<napi_value>>,
@@ -95,11 +156,14 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
             let mut class_data = unsafe { Rc::from_raw(class_data) };
 
             let class = if class_data.args_rust.is_some() {
+                // Constructor has been called from Rust
                 let args_rust = Rc::make_mut(&mut class_data).args_rust.take().expect("None value here");
                 Self::constructor(args_rust)?
             } else if class_data.instance.is_some() {
+                // Constructor has been called with the existing Rust instance
                 Rc::make_mut(&mut class_data).instance.take().expect("Instance none")
             } else {
+                // Constructor has been called from JS
                 Self::constructor(FromArguments::from_args(&args)?)?
             };
 
@@ -107,8 +171,9 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
             let copy_class_data = Rc::clone(&class_data);
             std::mem::forget(class_data);
 
-            let this = args.this()?.as_jsobject()
-                                   .map_err(|_| ThisConstructor(C::CLASSNAME))?;
+            let this = args.this()?
+                           .as_jsobject()
+                           .map_err(|_| ThisConstructor(C::CLASSNAME))?;
 
             if !(this.has_property(C::PINAR_CLASS_ID)?) {
                 return Err(ThisConstructor(C::CLASSNAME).into())
@@ -169,6 +234,7 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
     }
 }
 
+/// Class Data attached to the JS instance
 struct JsClassData<C: JsClass> {
     id: TypeId,
     args_rust: Option<C::ArgsConstructor>,
@@ -188,6 +254,8 @@ impl<C: JsClass> Clone for JsClassData<C> {
     }
 }
 
+/// Struct holding informations (properties) of the JS class to build.
+#[doc(hidden)]
 pub struct ClassBuilder<C: JsClass> {
     props: Vec<ClassProperty<C>>,
     name: String
@@ -235,6 +303,7 @@ impl<C: JsClass> Default for ClassBuilder<C> {
 }
 
 impl<C: JsClass + 'static> ClassBuilder<C> {
+    /// Add a method to the class
     pub fn with_method<S, A, R, Method>(mut self, name: S, method: Method) -> Self
     where
         S: AsRef<str>,
@@ -246,6 +315,7 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
         self
     }
 
+    /// Add an accessor to the class
     pub fn with_accessor<S, A, R, Accessor>(mut self, name: S, accessor: Accessor) -> Self
     where
         S: AsRef<str>,
@@ -257,6 +327,7 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
         self
     }
 
+    /// Build the class with its properties
     fn create_internal<'e>(
         &self,
         env: &Env,
@@ -330,12 +401,14 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
         self.create_internal(env, None, None)
     }
 
+    /// Instantiate the JS class from Rust
     pub fn new_instance<'e>(env: Env, args: C::ArgsConstructor) -> Result<JsObject<'e>> {
         let builder = ClassBuilder::<C>::default();
         let fun = builder.create_internal(&env, Some(args), None)?;
         fun.new_instance(())
     }
 
+    /// Instantiate the Js class from Rust with its Rust instance
     pub fn from_instance<'e>(env: Env, instance: C) -> Result<JsObject<'e>> {
         let builder = ClassBuilder::<C>::default();
         let fun = builder.create_internal(&env, None, Some(instance))?;
@@ -350,6 +423,7 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
 // TODO: Use https://github.com/rust-lang/rust/pull/55986
 //       when it reaches stable
 
+/// Trait to implement for a method of a class
 pub trait MethodFn<C, A, R>
 where
     C: JsClass,
@@ -399,6 +473,7 @@ impl_methodfn!(
     (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O)
 );
 
+/// Struct containing the method
 pub struct ClassMethod<C, A, R>
 where
     C: JsClass,
@@ -424,6 +499,7 @@ where
     }
 }
 
+/// Trait to call a method of the class
 trait ClassMethodHandler<C: JsClass> {
     fn call(&self, this: &mut C, args: &Arguments) -> Result<Option<napi_value>>;
 }
@@ -445,6 +521,37 @@ where
     }
 }
 
+/// Helper struct to instantiate a JS class with an existing Rust value
+///
+/// The type must implement [`JsClass`]
+///
+/// # Example
+///
+/// ```
+/// struct MyStruct {}
+///
+/// #[pinar]
+/// impl MyStruct { .. }
+///
+/// // The following functions do the same things (instantiate a JS class)
+/// 
+/// #[pinar]
+/// fn my_func() -> AsJsClass<MyStruct> {
+///     AsJsClass(MyStruct {})
+/// }
+/// 
+/// #[pinar]
+/// fn my_func(env: Env) -> JsResult<Value> {
+///     MyStruct{}.to_js_class(env)
+/// }
+/// 
+/// #[pinar]
+/// fn my_func() -> JsResult<JsObject> {
+///     MyStruct::new_instance(env, ())
+/// }
+/// ```
+///
+/// [`JsClass`]: ./trait.JsClass.html
 pub struct AsJsClass<C: JsClass>(pub C);
 
 impl<C> AsJsClass<C>

@@ -8,6 +8,20 @@ use std::path::{Path, PathBuf};
 use crate::prelude::*;
 use crate::Result;
 
+/// Trait to convert a Rust value to Javascript
+///
+/// Is it implemented for basic Rust types and users of Pinar
+/// can use the derive macro [`Pinar`] to implement it.
+///
+/// # Example
+/// ```
+/// #[derive(Serialize, Deserialize, Pinar)]
+/// struct MyStruct {
+///     s: String,
+///     n: i64
+/// }
+/// ```
+/// [`Pinar`]: ./derive.Pinar.html
 pub trait ToJs<'e> {
     type Value: JsValue;
     fn to_js(&self, _: Env) -> Result<Self::Value>;

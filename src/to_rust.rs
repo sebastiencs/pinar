@@ -7,8 +7,22 @@ use std::path::PathBuf;
 use crate::prelude::*;
 use crate::Result;
 
+/// Trait to convert a Javascript value to Rust
+///
+/// Is it implemented for basic Rust types and users of Pinar
+/// can use the derive macro [`Pinar`] to implement it.
+///
+/// # Example
+/// ```
+/// #[derive(Serialize, Deserialize, Pinar)]
+/// struct MyStruct {
+///     s: String,
+///     n: i64
+/// }
+/// ```
+/// [`Pinar`]: ./derive.Pinar.html
 pub trait ToRust<R> {
-    fn to_rust(&self) -> Result<R>;
+    fn to_rust(&self) -> JsResult<R>;
 }
 
 impl<'e> ToRust<String> for JsString<'e>
@@ -43,13 +57,6 @@ impl<'e> ToRust<PathBuf> for JsString<'e>
 }
 
 use crate::error::ArgumentsError;
-
-impl<'e> ToRust<()> for JsString<'e>
-{
-    fn to_rust(&self) -> Result<()> {
-        Err(ArgumentsError::wrong_type("a", 1))
-    }
-}
 
 impl<'e> ToRust<i64> for JsNumber<'e> {
     fn to_rust(&self) -> Result<i64> {
@@ -130,6 +137,63 @@ impl<'e> ToRust<serde_json::Value> for JsAny<'e> {
     }
 }
 
+// impl<'e, T> ToRust<T> for JsAny<'e>
+// where
+//     JsString<'e>: ToRust<T>,
+//     JsObject<'e>: ToRust<T>,
+//     JsArray<'e>: ToRust<T>,
+//     JsNumber<'e>: ToRust<T>,
+//     JsSymbol<'e>: ToRust<T>,
+//     JsExternal<'e>: ToRust<T>,
+//     JsFunction<'e>: ToRust<T>,
+//     JsUndefined<'e>: ToRust<T>,
+//     JsNull<'e>: ToRust<T>,
+//     JsBoolean<'e>: ToRust<T>,
+//     JsBigInt<'e>: ToRust<T>,
+// {
+//     fn to_rust(&self) -> Result<T> {
+//         match self {
+//             JsAny::String(s) => s.to_rust(),
+//             JsAny::Object(s) => s.to_rust(),
+//             JsAny::Array(s) => s.to_rust(),
+//             JsAny::Number(s) => s.to_rust(),
+//             JsAny::Symbol(s) => s.to_rust(),
+//             JsAny::External(s) => s.to_rust(),
+//             JsAny::Function(s) => s.to_rust(),
+//             JsAny::Undefined(s) => s.to_rust(),
+//             JsAny::Null(s) => s.to_rust(),
+//             JsAny::Boolean(s) => s.to_rust(),
+//             JsAny::BigInt(s) => s.to_rust(),
+//         }
+//     }    
+// }
+
+// use crate::error::JsAnyError::WrongAny;
+
+// impl<'e, T> ToRust<T> for JsAny<'e>
+// where
+//     JsString<'e>: ToRust<T>,
+// {
+//     fn to_rust(&self) -> Result<T> {
+//         match self {
+//             JsAny::String(s) => s.to_rust(),
+//             _ => Err(WrongAny)
+//         }
+//     }    
+// }
+
+// impl<'e, T> ToRust<T> for JsAny<'e>
+// where
+//     JsObject<'e>: ToRust<T>,
+// {
+//     fn to_rust(&self) -> Result<T> {
+//         match self {
+//             JsAny::Object(s) => s.to_rust(),
+//             _ => Err(WrongAny)
+//         }
+//     }    
+// }
+
 impl<'e, T: 'static> ToRust<Arc<T>> for JsExternal<'e>
 {
     fn to_rust(&self) -> Result<Arc<T>> {
@@ -171,9 +235,7 @@ where
         let env = self.value.env;
         let mut vec = Vec::with_capacity(self.len()?);
         for elem in self.iter()? {
-            let elem: Result<_> = pinar_serde::de::from_any::<T>(env, elem).map_err(|e| {
-                ArgumentsError::Deserialization(format!("{}", e)).into()
-            });
+            let elem: Result<_> = pinar_serde::de::from_any::<T>(env, elem).map_err(Into::into);
             vec.push(elem?);
         }
         Ok(vec)

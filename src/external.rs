@@ -45,7 +45,7 @@ impl<T: 'static> External<T> {
         }
     }
 
-    pub(crate) fn get_rc<O: 'static>(&mut self) -> Rc<T> {
+    pub(crate) fn get_rc<O: 'static>(&self) -> Rc<T> {
         if self.id != TypeId::of::<O>() {
             panic!("Trying to get a Rc of a different type");
         }
@@ -56,7 +56,7 @@ impl<T: 'static> External<T> {
         }
     }
 
-    pub(crate) fn get_arc<O: 'static>(&mut self) -> Arc<T> {
+    pub(crate) fn get_arc<O: 'static>(&self) -> Arc<T> {
         if self.id != TypeId::of::<O>() {
             panic!("Trying to get an Arc of a different type");
         }

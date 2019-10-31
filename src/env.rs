@@ -31,6 +31,15 @@ use crate::{
 use crate::{Result, Value, JsValue};
 use crate::status::Status;
 
+/// Represent the Javascript context in which the native function has been invoked.
+///
+/// It can be used to create javascript values, throw errors, access global object, ..
+///
+/// Javascript values can be created manually with methods of `Env`, but it is
+/// recommended to use the traits [`ToJs`] and [`ToRust`].
+///
+/// [`ToJs`]: ./trait.ToJs.html
+/// [`ToRust`]: ./trait.ToRust.html
 #[derive(Copy, Clone)]
 pub struct Env {
     env: napi_env
@@ -45,7 +54,19 @@ impl Env {
         Env { env }
     }
 
-    pub fn log(&self, args: impl MultiJs) -> Result<()> {
+    /// Calls the Javascript `console.log` function.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// #[pinar]
+    /// fn my_func(env: Env) -> JsResult<()> {
+    ///     env.console_log("hello on stdout")?;
+    ///     env.console_log((1, vec![], Arc::new(10)))?;
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn console_log(&self, args: impl MultiJs) -> Result<()> {
         let log = self.global()?
                       .get("console")?
                       .as_jsobject()?
@@ -56,7 +77,19 @@ impl Env {
         Ok(())
     }
 
-    pub fn error(&self, args: impl MultiJs) -> Result<()> {
+    /// Calls the Javascript `console.error` function.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// #[pinar]
+    /// fn my_func(env: Env) -> JsResult<()> {
+    ///     env.console_error("hello on stderr")?;
+    ///     env.console_error((9, Rc::new(1), vec![]))?;
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn console_error(&self, args: impl MultiJs) -> Result<()> {
         let error = self.global()?
                         .get("console")?
                         .as_jsobject()?
@@ -67,6 +100,16 @@ impl Env {
         Ok(())
     }
 
+    /// Creates a [`JsBoolean`].
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// #[pinar]
+    /// fn my_func(env: Env) -> JsResult<JsBoolean> {
+    ///     env.boolean(true)
+    /// }
+    /// ```
     pub fn boolean<'e>(&self, b: bool) -> Result<JsBoolean<'e>> {
         let mut value = Value::new(*self);
 
@@ -79,6 +122,16 @@ impl Env {
         Ok(JsBoolean::from(value))
     }
 
+    /// Creates a [`JsNumber`] from a [`f64`].
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// #[pinar]
+    /// fn my_func(env: Env) -> JsResult<JsNumber> {
+    ///     env.double(42.0)
+    /// }
+    /// ```
     pub fn double<'e>(&self, d: f64) -> Result<JsNumber<'e>> {
         let mut value = Value::new(*self);
 
@@ -91,6 +144,18 @@ impl Env {
         Ok(JsNumber::from(value))
     }
 
+    /// Creates an empty javascript object
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// #[pinar]
+    /// fn my_func(env: Env) -> JsResult<JsObject> {
+    ///     let mut obj = env.object()?;
+    ///     obj.set("a", 10)?;
+    ///     Ok(obj)
+    /// }
+    /// ```
     pub fn object<'e>(&self) -> Result<JsObject<'e>> {
         let mut value = Value::new(*self);
 
@@ -102,6 +167,16 @@ impl Env {
         Ok(JsObject::from(value))
     }
 
+    /// Creates a [`JsNumber`] from a [`i64`].
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// #[pinar]
+    /// fn my_func(env: Env) -> JsResult<JsNumber> {
+    ///     env.number(42)
+    /// }
+    /// ```
     pub fn number<'e>(&self, n: i64) -> Result<JsNumber<'e>> {
         let mut value = Value::new(*self);
 
@@ -114,6 +189,16 @@ impl Env {
         Ok(JsNumber::from(value))
     }
 
+    /// Creates a javascript string.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// #[pinar]
+    /// fn my_func(env: Env) -> JsResult<JsString> {
+    ///     env.string("hello")
+    /// }
+    /// ```
     pub fn string<'e, S: AsRef<str>>(&self, s: S) -> Result<JsString<'e>> {
         let mut value = Value::new(*self);
         let s = s.as_ref();
@@ -128,6 +213,18 @@ impl Env {
         Ok(JsString::from(value))
     }
 
+    /// Creates an empty javascript array.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// #[pinar]
+    /// fn my_func(env: Env) -> JsResult<JsArray> {
+    ///     let mut array = env.array()?;
+    ///     array.set(0, 10)
+    ///     Ok(array)
+    /// }
+    /// ```
     pub fn array<'e>(&self) -> Result<JsArray<'e>> {
         let mut value = Value::new(*self);
 
@@ -139,6 +236,16 @@ impl Env {
         Ok(JsArray::from(value))
     }
 
+    /// Creates a javascript array with the specified capacity.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// #[pinar]
+    /// fn my_func(env: Env) -> JsResult<JsArray> {
+    ///     env.array_with_capacity(100)
+    /// }
+    /// ```
     pub fn array_with_capacity<'e>(&self, cap: usize) -> Result<JsArray<'e>> {
         let mut value = Value::new(*self);
 
@@ -151,6 +258,7 @@ impl Env {
         Ok(JsArray::from(value))
     }
 
+    /// Returns the javascript `global` object.
     pub fn global<'e>(&self) -> Result<JsObject<'e>> {
         let mut global = Value::new(*self);
 
@@ -162,6 +270,7 @@ impl Env {
         Ok(JsObject::from(global))
     }
 
+    /// Returns the javascript `undefined`.
     pub fn undefined<'e>(&self) -> Result<JsUndefined<'e>> {
         let mut undefined = Value::new(*self);
 
@@ -173,6 +282,7 @@ impl Env {
         Ok(JsUndefined::from(undefined))
     }
 
+    /// Returns the javascript `null`.
     pub fn null<'e>(&self) -> Result<JsNull<'e>> {
         let mut null = Value::new(*self);
 
@@ -184,6 +294,16 @@ impl Env {
         Ok(JsNull::from(null))
     }
 
+    /// Creates a javascript external object from a [`Box`]
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// #[pinar]
+    /// fn my_func(env: Env) -> JsResult<JsExternal> {
+    ///     env.external_box(Box::new(100))
+    /// }
+    /// ```
     pub fn external_box<'e, T: 'static>(&self, ptr: Box<T>) -> Result<JsExternal<'e>> {
         let mut result = Value::new(*self);
         let external = Box::new(External::new_box(ptr));
@@ -199,6 +319,16 @@ impl Env {
         Ok(JsExternal::from(result))
     }
 
+    /// Creates a javascript external object from a [`Rc`].
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// #[pinar]
+    /// fn my_func(env: Env) -> JsResult<JsExternal> {
+    ///     env.external_rc(Rc::new(100))
+    /// }
+    /// ```
     pub fn external_rc<'e, T: 'static>(&self, ptr: Rc<T>) -> Result<JsExternal<'e>> {
         let mut result = Value::new(*self);
         let external = Box::new(External::new_rc(ptr));
@@ -214,6 +344,16 @@ impl Env {
         Ok(JsExternal::from(result))
     }
 
+    /// Creates a javascript external object from a [`Arc`].
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// #[pinar]
+    /// fn my_func(env: Env) -> JsResult<JsExternal> {
+    ///     env.external_arc(Arc::new(100))
+    /// }
+    /// ```
     pub fn external_arc<'e, T: 'static>(&self, ptr: Arc<T>) -> Result<JsExternal<'e>> {
         let mut result = Value::new(*self);
         let external = Box::new(External::new_arc(ptr));
@@ -229,6 +369,20 @@ impl Env {
         Ok(JsExternal::from(result))
     }
 
+    /// Creates a javascript function.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// fn my_js_func(n: i64, s: String) -> PathBuf {
+    ///     PathBuf::from("/etc/hosts")
+    /// }
+    ///
+    /// #[pinar]
+    /// fn my_func(env: Env) -> JsResult<JsFunction> {
+    ///     env.function("jsfunc", my_js_func)
+    /// }
+    /// ```
     pub fn function<'e, N, F, A, R>(&self, name: N, fun: F) -> Result<JsFunction<'e>>
     where
         N: AsRef<str>,
@@ -289,6 +443,16 @@ impl Env {
         Ok((data_ptr, Arguments::new(*self, this, &argv)?))
     }
 
+    /// Throws the JavaScript value provided
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// #[pinar]
+    /// fn my_func(env: Env) -> JsResult<()> {
+    ///     env.throw("some error")
+    /// }
+    /// ```
     pub fn throw<'e, V>(&self, error: V) -> Result<()>
     where
         V: ToJs<'e>
@@ -300,6 +464,16 @@ impl Env {
         Err(Status::PendingException.into())
     }
 
+    /// Throws a JavaScript `Error` with the text provided.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// #[pinar]
+    /// fn my_func(env: Env) -> JsResult<()> {
+    ///     env.throw_error("some message", "my_code")
+    /// }
+    /// ```
     pub fn throw_error<M>(&self, msg: M, code: impl Into<Option<String>>) -> Result<()>
     where
         M: AsRef<str>
@@ -320,6 +494,16 @@ impl Env {
         Err(Status::PendingException.into())
     }
 
+    /// Throws a JavaScript `TypeError` with the text provided.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// #[pinar]
+    /// fn my_func(env: Env) -> JsResult<()> {
+    ///     env.throw_type_error("some message", "my_code")
+    /// }
+    /// ```
     pub fn throw_type_error<'s, M>(&self, msg: M, code: impl Into<Option<&'s str>>) -> Result<()>
     where
         M: AsRef<str>
@@ -340,6 +524,16 @@ impl Env {
         Err(Status::PendingException.into())
     }
 
+    /// Throws a JavaScript `RangeError` with the text provided.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// #[pinar]
+    /// fn my_func(env: Env) -> JsResult<()> {
+    ///     env.throw_range_error("some message", "my_code")
+    /// }
+    /// ```
     pub fn throw_range_error<'s, M>(&self, msg: M, code: impl Into<Option<&'s str>>) -> Result<()>
     where
         M: AsRef<str>
@@ -360,6 +554,19 @@ impl Env {
         Err(Status::PendingException.into())
     }
 
+    /// Executes the provided script.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// #[pinar]
+    /// fn my_func(env: Env) -> JsResult<()> {
+    ///     let result = env.run_script("console.log('hello')")?;
+    ///     Ok(())
+    /// }
+    /// ```
+    ///
+    ///
     pub fn run_script<'e, S>(&self, script: S) -> Result<JsAny<'e>>
     where
         S: AsRef<str>

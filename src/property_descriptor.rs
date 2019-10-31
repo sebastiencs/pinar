@@ -16,6 +16,7 @@ use napi_sys::*;
 //     data: std::ptr::null_mut(),
 // });
 
+/// Struct to create a property on an object
 #[allow(dead_code)]
 pub struct PropertyDescriptor {
     name: napi_value,
@@ -27,6 +28,9 @@ pub struct PropertyDescriptor {
 }
 
 impl PropertyDescriptor {
+    /// Creates a method on the object
+    ///
+    /// Todo: Remove this exposure to n-api detail
     pub fn method<S: AsRef<str>>(env: Env, name: S, cb: napi_callback) -> Result<Self> {
         Ok(PropertyDescriptor {
             name: env.string(name.as_ref())?.get_value().value,
@@ -38,6 +42,9 @@ impl PropertyDescriptor {
         })
     }
 
+    /// Creates a setter on the object
+    ///
+    /// Todo: Remove this exposure to n-api detail
     pub fn set_get<S: AsRef<str>>(env: Env, name: S, cb: napi_callback) -> Result<Self> {
         Ok(PropertyDescriptor {
             name: env.string(name.as_ref())?.get_value().value,
@@ -49,6 +56,7 @@ impl PropertyDescriptor {
         })
     }
 
+    /// Creates a value on the object
     pub fn value<'e, S: AsRef<str>, V: ToJs<'e>>(env: Env, name: S, value: V) -> Result<Self> {
         Ok(PropertyDescriptor {
             name: env.string(name.as_ref())?.get_value().value,

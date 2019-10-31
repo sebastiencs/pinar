@@ -26,7 +26,26 @@ impl Error {
     pub fn downcast_ref<T: 'static>(&self) -> Option<&T> {
         self.cause.as_any().downcast_ref::<T>()
     }
+
+    #[allow(mutable_transmutes)]
+    fn take(&self) -> Self {
+        let self_mut: &mut Self = unsafe { std::mem::transmute(self) };
+        
+        let cause: Box<dyn JsError> = std::mem::replace(
+            &mut self_mut.cause,
+            Box::new(JsReturnRefError)
+        );
+        
+        Error {
+            cause,
+            backtrace: self.backtrace.clone()
+        }
+    }
 }
+
+#[derive(Display, Debug)]
+#[display(fmt = "Error on JsReturnRef Error, this should never happen.")]
+pub(crate) struct JsReturnRefError;
 
 #[derive(Display, Debug)]
 #[display(fmt = "Null pointer on external data")]
@@ -95,6 +114,12 @@ impl<T: JsError + 'static> From<T> for Error {
     }
 }
 
+impl From<&Error> for Error {
+    fn from(error: &Error) -> Error {
+        error.take()
+    }
+}
+
 use std::any::TypeId;
 use std::any::Any;
 
@@ -133,6 +158,12 @@ impl JsError for ArgumentsError {
 }
 
 impl JsError for JsExternalError {
+    fn get_code(&self) -> Option<String> {
+        Some("PINAR".to_owned())
+    }
+}
+
+impl JsError for JsReturnRefError {
     fn get_code(&self) -> Option<String> {
         Some("PINAR".to_owned())
     }

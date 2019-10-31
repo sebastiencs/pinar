@@ -5,6 +5,7 @@ use crate::prelude::*;
 use super::*;
 use crate::error::JsClassError;
 
+/// A Javascript object
 pub struct JsObject<'e> {
     pub(crate) value: Value,
     pub(crate) phantom: PhantomData<&'e ()>
@@ -16,6 +17,20 @@ impl<'e> JsObject<'e> {
         self.value.env
     }
 
+    /// Set a property on the object.
+    /// # Example
+    /// ```
+    /// #[pinar]
+    /// fn my_func(obj: JsObject) -> JsResult<()> {
+    ///     obj.set("my_prop", vec![1, 2, 3])?;
+    ///     
+    ///     obj.set(4, HashMap::new())?;
+    ///     
+    ///     obj.set("an_external", Arc::new(HashMap::new()))?;
+    ///     
+    ///     Ok(())
+    /// }    
+    /// ```
     pub fn set<K, V>(&self, key: K, value: V) -> Result<()>
     where
         K: KeyProperty + ToJs<'e>,
@@ -34,6 +49,8 @@ impl<'e> JsObject<'e> {
         Ok(())
     }
 
+    /// Similar to `set` but takes references.
+    /// Used internally only.
     pub(crate) fn set_ref<K, V>(&self, key: &K, value: &V) -> Result<()>
     where
         K: KeyProperty + ToJs<'e>,
@@ -52,6 +69,21 @@ impl<'e> JsObject<'e> {
         Ok(())
     }
 
+    /// Returns the requested property on the object.
+    ///
+    /// # Example
+    /// ```
+    /// #[pinar]
+    /// fn my_func(obj: JsObject) -> JsResult<()> {
+    ///     let array = obj.get("my_prop")?.as_jsarray()?;
+    ///     
+    ///     let o = obj.get(4)?.as_jsobject()?;
+    ///     
+    ///     let ext = obj.get("an_external")?.as_jsexternal()?;
+    ///     
+    ///     Ok(())
+    /// }    
+    /// ```
     pub fn get<K>(&self, key: K) -> Result<JsAny<'e>>
     where
         K: KeyProperty + ToJs<'e>
@@ -69,6 +101,8 @@ impl<'e> JsObject<'e> {
         Ok(JsAny::from(value)?)
     }
 
+    /// Returns the names of the enumerable properties of the object.  
+    /// The properties whose key is a symbol will not be included.
     pub fn get_property_names(&self) -> Result<Vec<String>> {
         let mut value = Value::new(self.value.env);
 
@@ -82,6 +116,7 @@ impl<'e> JsObject<'e> {
         Ok(array.iter()?.filter_map(|v| v.as_string().ok()).collect())
     }
 
+    /// Similar to `get_property_names` but returns a `Vec` of `JsAny` instead.
     pub(crate) fn get_property_names_any(&self) -> Result<Vec<JsAny<'e>>> {
         let mut value = Value::new(self.value.env);
 
@@ -95,6 +130,7 @@ impl<'e> JsObject<'e> {
         array.with_values(JsAny::from)
     }
 
+    /// Checks if the object has the named property.
     pub fn has_property<K>(&self, key: K) -> Result<bool>
     where
         K: KeyProperty + ToJs<'e>
@@ -112,9 +148,12 @@ impl<'e> JsObject<'e> {
         Ok(result)
     }
 
+    /// Checks if the Object passed in has the named own property.  
+    /// The key must be a string or symbol.  
+    /// A Rust string will be converted to a Javascript string.  
     pub fn has_own_property<K>(&self, key: K) -> Result<bool>
     where
-        K: KeyProperty + ToJs<'e>
+        K: OwnProperty + ToJs<'e>
     {
         let mut result = false;
         let key = key.to_js(self.value.env)?.get_value();
@@ -129,6 +168,7 @@ impl<'e> JsObject<'e> {
         Ok(result)
     }
 
+    /// Delete the key own property from object
     pub fn delete_property<K>(&self, key: K) -> Result<bool>
     where
         K: KeyProperty + ToJs<'e>
@@ -146,6 +186,7 @@ impl<'e> JsObject<'e> {
         Ok(result)
     }
 
+    /// Allows the efficient definition of multiple properties on the object.  
     pub fn define_properties(&self, props: impl IntoIterator<Item = PropertyDescriptor>) -> Result<()> {
         let props = props.into_iter()
                          .map(Into::into)
@@ -161,6 +202,7 @@ impl<'e> JsObject<'e> {
         Ok(())
     }
 
+    /// Define a property on the object.
     pub fn define_property(&self, prop: PropertyDescriptor) -> Result<()> {
         napi_call!(napi_define_properties(
             self.value.env(),
@@ -172,6 +214,8 @@ impl<'e> JsObject<'e> {
         Ok(())
     }
 
+    /// Retrieves a native instance that was previously wrapped in
+    /// a JavaScript object using napi_wrap()
     pub(crate) fn napi_unwrap<T>(&self) -> Result<*mut T> {
         let mut obj: *mut T = std::ptr::null_mut();
 
@@ -189,10 +233,11 @@ impl<'e> JsObject<'e> {
     }
 }
 
-/// - Named: a simple UTF8-encoded string
-/// - Integer-Indexed: an index value represented by uint32_t
-/// - JavaScript value: these are represented in N-API by napi_value.
-///   This can be a napi_value representing a String, Number, or Symbol.
+/// Trait implemented with types that can be property keys
+// - Named: a simple UTF8-encoded string
+// - Integer-Indexed: an index value represented by uint32_t
+// - JavaScript value: these are represented in N-API by napi_value.
+//   This can be a napi_value representing a String, Number, or Symbol.
 pub trait KeyProperty {}
 
 impl KeyProperty for JsString<'_> {}
@@ -209,3 +254,11 @@ impl KeyProperty for u64 {}
 impl KeyProperty for u32 {}
 impl KeyProperty for u16 {}
 impl KeyProperty for u8 {}
+
+/// Trait implemented with types that can be own property keys
+pub trait OwnProperty {}
+impl OwnProperty for JsString<'_> {}
+impl OwnProperty for JsSymbol<'_> {}
+impl OwnProperty for &'_ str {}
+impl OwnProperty for String {}
+

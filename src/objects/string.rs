@@ -5,6 +5,7 @@ use napi_sys::*;
 use crate::prelude::*;
 use crate::Result;
 
+/// A Javascript string
 pub struct JsString<'e> {
     pub(crate) value: Value,
     pub(crate) phantom: PhantomData<&'e ()>
@@ -26,6 +27,7 @@ impl<'e> JsString<'e> {
         Ok(length)
     }
 
+    /// Checks if the string is empty
     pub fn is_empty(&self) -> Result<bool> {
         Ok(self.len()? == 0)
     }

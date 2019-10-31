@@ -9,6 +9,8 @@ use crate::Result;
 use crate::JsValue;
 use crate::prelude::*;
 
+/// Structure containing arguments of the js function call and `this`
+#[doc(hidden)]
 pub struct Arguments {
     env: Env,
     args: Vec<Value>,
@@ -17,6 +19,7 @@ pub struct Arguments {
 }
 
 impl Arguments {
+    /// Creates `Arguments` from js raw values
     pub(crate) fn new(env: Env, this: Value, args: &[napi_value]) -> Result<Arguments> {
         Ok(Arguments {
             env,
@@ -28,6 +31,7 @@ impl Arguments {
         })
     }
 
+    /// Returns the `this` of the function
     pub fn this<'e>(&self) -> Result<JsThis<'e>> {
         Ok(JsThis(JsAny::from(self.this)?))
     }
@@ -47,6 +51,28 @@ impl Arguments {
     }
 }
 
+/// Trait to implement for types received by arguments on js function calls.
+///
+/// This trait is implemented with the macro derive [`Pinar`].
+///
+/// # Example
+///
+/// ```
+/// #[derive(Serialize, Deserialize, Pinar)]
+/// struct MyStruct {
+///     a: i64,
+///     s: String
+/// }
+///
+/// // MyStruct can now be receveid on arguments and is converted from JS to Rust.
+///
+/// #[pinar]
+/// fn my_func(data: MyStruct) -> JsResult<()> {
+///     Ok(())
+/// }
+/// ```
+///
+/// [`Pinar`]: ./derive.Pinar.html
 pub trait FromArguments: Sized {
     fn from_args(args: &Arguments) -> Result<Self>;
 }

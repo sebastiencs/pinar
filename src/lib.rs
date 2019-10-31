@@ -22,8 +22,8 @@
 
 #![allow(clippy::trivially_copy_pass_by_ref)]
 
-/// A convenient macro to call napi functions
-/// Convert the result to a Status
+/// A convenient macro to call napi functions.
+/// Convert the return value to a Result<Status, Error>
 macro_rules! napi_call {
     (
         $fun:expr
@@ -39,46 +39,100 @@ macro_rules! napi_call {
 
 use napi_sys::*;
 //use crate::module::ModuleBuilder;
-use crate::objects::*;
+#[doc(inline)]
+pub use crate::objects::*;
+/// Implements the traits [`FromArguments`], [`ToJs`] and [`ToRust`].
+///
+/// The type must implements Serialize and Deserialize from `serde`.
+///
+/// # Example
+/// ```
+/// #[derive(Serialize, Deserialize, Pinar)]
+/// struct MyStruct {
+///     s: String,
+///     n: i64
+/// }
+/// ```
+///
+/// [`FromArguments`]: ./trait.FromArguments.html
+/// [`ToJs`]: ./trait.ToJs.html
+/// [`ToRust`]: ./trait.ToRust.html
+pub use pinar_derive::Pinar;
+
+/// Exports functions and classes to javascript.  
+///
+/// Attribute macro that can be applied to functions and implementations.  
+///
+/// # Example
+///
+/// ```
+/// #[pinar]
+/// fn my_func() -> JsResult<()> {
+///     Ok(())
+/// }
+/// // my_func is now callable from javascript
+///
+/// struct MyStruct {
+///     num: i64
+/// }
+///
+/// #[pinar]
+/// impl MyStruct {
+///     fn constructor(num: i64, num2: i64) -> JsResult<MyStruct> {
+///         Ok(MyStruct { num: num + num2 })
+///     }
+///     fn my_method(&self) -> &i64 {
+///         &self.num
+///     }
+///     fn my_other_method(&mut self) {
+///         self.num = some_computation();
+///     }
+/// }
+///
+/// // The type MyStruct is now a class in JS.
+/// // It has a constructor and 2 methods: my_method and my_other_method
+///
+/// ```
+pub use pinar_derive::pinar;
 //use crate::env::Env;
 //use crate::to_js::ToJs;
 
-pub mod status;
+mod status;
 mod value;
 mod module;
 mod error;
 mod jsreturn;
 mod classes;
-pub mod property_descriptor;
+mod property_descriptor;
 mod external;
-pub mod objects;
+mod objects;
 mod env;
 mod arguments;
-mod function_threadsafe;
 mod to_rust;
 mod multi_js;
 mod to_js;
 
+#[doc(hidden)]
 #[cfg(feature = "pinar-serde")]
 pub mod pinar_serde;
 
 pub(crate) type Result<R> = std::result::Result<R, Error>;
 pub type JsResult<R> = Result<R>;
 
-pub use crate::error::Error;
+pub use crate::error::{Error, JsError};
 pub use crate::env::Env;
 pub use crate::multi_js::MultiJs;
 //pub use crate::objects::*;
 //pub use crate::status::Status;
 pub use crate::to_js::ToJs;
 pub use crate::to_rust::ToRust;
-pub use crate::function_threadsafe::JsFunctionThreadSafe;
+//pub use crate::function_threadsafe::JsFunctionThreadSafe;
 pub use crate::module::ModuleBuilder;
 //pub use crate::property_descriptor::PropertyDescriptor;
 pub use crate::jsreturn::JsReturn;
 //pub use crate::module::__pinar_dispatch_function;
 pub use crate::arguments::{FromArguments, Arguments};
-pub use crate::classes::{JsClass, ClassBuilder};
+pub use crate::classes::{JsClass, AsJsClass, ClassBuilder};
 //pub use crate::JsResult;
 // #[doc(hidden)]
 // #[cfg(feature = "pinar-serde")]
@@ -89,18 +143,24 @@ pub use crate::classes::{JsClass, ClassBuilder};
 pub mod prelude {
     pub use crate::env::Env;
     pub use crate::multi_js::MultiJs;
+    #[doc(inline)]
     pub use crate::objects::*;
+    #[doc(inline)]
     pub use crate::status::Status;
     pub use crate::to_js::ToJs;
     pub use crate::to_rust::ToRust;
-    pub use crate::function_threadsafe::JsFunctionThreadSafe;
+    //pub use crate::objects::JsFunctionThreadSafe;
+    //pub use crate::objects::function_threadsafe::JsFunctionThreadSafe;
     pub use crate::module::ModuleBuilder;
+    #[doc(inline)]
     pub use crate::property_descriptor::PropertyDescriptor;
     pub use crate::jsreturn::{JsReturn, JsReturnRef};
     //pub use crate::module::__pinar_dispatch_function;
     pub use crate::arguments::{FromArguments, Arguments};
     pub use crate::classes::{JsClass, AsJsClass, ClassBuilder};
+    #[doc(inline)]
     pub use crate::JsResult;
+    #[doc(hidden)]
     #[cfg(feature = "pinar-serde")]
     pub use crate::pinar_serde::ser::serialize_to_js;
     #[cfg(feature = "pinar-serde")]
@@ -112,22 +172,28 @@ pub mod prelude {
     // pub use super::register_module;
     #[doc(hidden)]
     pub use napi_sys::{napi_env, napi_value};
-    pub use crate::error::{ArgumentsError, JsAnyError};
+    pub use crate::error::{ArgumentsError, JsAnyError, JsError};
 
+    #[doc(hidden)]
     pub use linkme::distributed_slice;
+    #[doc(hidden)]
     pub use linkme;
 
+    #[doc(hidden)]
     pub use super::{PINAR_CLASSES,PINAR_FUNCTIONS};
     pub use pinar_derive::pinar;
+    #[doc(hidden)]
     pub use super::pinar_serde;
 }
 
 use linkme::distributed_slice;
 
 #[distributed_slice]
+#[doc(hidden)]
 pub static PINAR_CLASSES: [fn(&mut ModuleBuilder)] = [..];
 
 #[distributed_slice]
+#[doc(hidden)]
 pub static PINAR_FUNCTIONS: [fn(&mut ModuleBuilder)] = [..];
 
 use std::cell::RefCell;

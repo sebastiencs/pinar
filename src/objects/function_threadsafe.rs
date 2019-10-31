@@ -11,6 +11,51 @@ use crate::Result;
 use crate::prelude::*;
 use serde::de::DeserializeOwned;
 
+/// A Javascript function callable from any thread.
+///
+/// The function is executed on the main JS thread.  
+/// The arguments and return's value types have to be specified with generic parameter.
+///
+/// The main JS loop won't exit as long as there are existing `JsFunctionThreadSafe`.
+///
+/// Result of the function can be retrieved or ignored.
+///
+/// # Example with result
+///
+/// The current thread will block until the js function returns its result.
+///
+/// ```
+/// #[pinar]
+/// fn my_func(fun: JsFunction) -> JsResult<()> {
+///     let fun = fun.make_threadsafe::<(String, i64), PathBuf>()?;
+///
+///     std::thread::spawn(move || {
+///         // The Javascript function will be called on the JS main thread
+///         // and the return value is transfered back to this thread
+///         let res: PathBuf = fun.call(("hello".to_string(), 124)).unwrap();
+///     });
+///
+///     Ok(())
+/// }
+/// ```
+///
+/// # Example ignoring result
+///
+/// The current thread will _not_ block.
+///
+/// ```
+/// #[pinar]
+/// fn my_func(fun: JsFunction) -> JsResult<()> {
+///     let fun = fun.make_threadsafe::<(String, i64)>()?;
+///
+///     std::thread::spawn(move || {
+///         // The Javascript function will be called on the JS main thread
+///         let res: () = fun.call_ignore_result(("hello".to_string(), 124)).unwrap();
+///     });
+///
+///     Ok(())
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub struct JsFunctionThreadSafe<T, R = ()>
 where
@@ -21,6 +66,8 @@ where
     phantom: PhantomData<(T, R)>
 }
 
+/// Data transfered between a Rust thread and the main JS thread.  
+/// It includes the function arguments and a channel to send the result.  
 struct DataThreadSafe<T, R = ()>
 where
     T: MultiJs + 'static,
@@ -37,15 +84,19 @@ where
     T: MultiJs + 'static,
     R: DeserializeOwned,
 {
+    /// Creates a `JsFunctionThreadSafe` from a raw `napi_threadsafe_function`
     pub(crate) fn new(fun: napi_threadsafe_function) -> Result<JsFunctionThreadSafe<T, R>> {
         let fun = JsFunctionThreadSafe {
             fun: Arc::new(AtomicPtr::new(fun)),
             phantom: PhantomData
         };
+        // Acquire the js function, the main JS loop won't exit until this `JsFunctionThreadSafe`
+        // is dropped
         fun.acquire()?;
         Ok(fun)
     }
 
+    /// Call the js function and wait for its result.
     pub fn call(&self, args: impl Into<Box<T>>) -> Result<R> {
         let (sender, receiver) = sync_channel(0);
         let data = Box::new(DataThreadSafe {
@@ -60,6 +111,7 @@ where
         Ok(receiver.recv().unwrap())
     }
 
+    /// Call the js function, this function _does not_ wait for the result.
     pub fn call_ignore_result(&self, args: impl Into<Box<T>>) -> Result<()> {
         let data = Box::new(DataThreadSafe::<_, ()> {
             send_result: None,
@@ -73,6 +125,7 @@ where
         Ok(())
     }
 
+    /// See https://nodejs.org/api/n-api.html#n_api_napi_acquire_threadsafe_function
     fn acquire(&self) -> Result<()> {
         napi_call!(napi_acquire_threadsafe_function(
             self.fun.load(Ordering::Relaxed)
@@ -80,6 +133,7 @@ where
         Ok(())
     }
 
+    /// See https://nodejs.org/api/n-api.html#n_api_napi_release_threadsafe_function
     fn release(&self) {
         let _ = napi_call!(napi_release_threadsafe_function(
             self.fun.load(Ordering::Relaxed),
@@ -95,6 +149,7 @@ where
 {
     fn drop(&mut self) {
         if Arc::strong_count(&self.fun) == 1 {
+            // Release the function, so the main JS thread can exit.
             self.release();
         }
     }
@@ -137,9 +192,16 @@ fn display_exception(env: Env) {
     unsafe {
         napi_get_and_clear_last_exception(env.env(), result.get_mut());
     }
-    let _ = env.error(("An exception occured with a threadsafe function:\n", result));
+    let _ = env.console_error(("An exception occured with a threadsafe function:\n", result));
 }
 
+/// Function executed on the main JS thread.
+///
+/// It is responsible of:
+/// - converting values to/from JS
+/// - Call the javascript function
+/// - Send the result to the other rust thread
+/// 
 extern "C" fn __pinar_threadsafe_function<T, R>(
     env: napi_env,
     js_callback: napi_value,
@@ -156,6 +218,7 @@ where
         let mut data: Box<DataThreadSafe<T, R>> = unsafe { Box::from_raw(data as *mut DataThreadSafe<T, R>) };
         let args = data.args;
 
+        // TODO: Send errors to the other thread instead of panicking.
         let result = match fun.call(*args) {
             Ok(result) => result,
             Err(e) => {

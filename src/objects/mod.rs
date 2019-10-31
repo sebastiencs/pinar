@@ -18,9 +18,7 @@ mod object;
 mod string;
 mod symbol;
 mod value;
-
-#[doc(hidden)]
-pub use self::value::Value;
+mod function_threadsafe;
 
 pub use self::{
     jsref::{
@@ -33,35 +31,43 @@ pub use self::{
     },
     external::JsExternal,
     function::JsFunction,
+    function_threadsafe::JsFunctionThreadSafe,
     number::JsNumber,
     object::{
         JsObject,
-        KeyProperty
+        KeyProperty,
+        OwnProperty,
     },
     string::JsString,
     symbol::JsSymbol,
+    value::Value,
 };
 
+/// A Javascript undefined.
 pub struct JsUndefined<'e> {
     pub(crate) value: Value,
     pub(crate) phantom: PhantomData<&'e ()>
 }
 
+/// A Javascript null.
 pub struct JsNull<'e> {
     pub(crate) value: Value,
     pub(crate) phantom: PhantomData<&'e ()>
 }
 
+/// A Javascript boolean.
 pub struct JsBoolean<'e> {
     pub(crate) value: Value,
     pub(crate) phantom: PhantomData<&'e ()>
 }
 
+/// A Javascript BigInt.
 pub struct JsBigInt<'e> {
     pub(crate) value: Value,
     pub(crate) phantom: PhantomData<&'e ()>
 }
 
+/// Enum representing any kind of Javascript value
 pub enum JsAny<'e> {
     String(JsString<'e>),
     Object(JsObject<'e>),
@@ -164,6 +170,7 @@ impl<'e> JsAny<'e> {
     }
 
     #[inline]
+    #[allow(dead_code)]
     pub(crate) fn env(&self) -> Env {
         match self {
             JsAny::String(s) => s.value.env,
@@ -198,11 +205,25 @@ impl<'e> JsAny<'e> {
     );
 }
 
+/// A Javascript value representing the `this` on a function call.
+///
+/// `JsThis` dereferences to a [`JsAny`]
+///
+/// # Example
+/// ```
+/// #[pinar]
+/// fn my_func(this: JsThis) -> JsResult<()> {
+///     let this: JsObject = this.as_js_object()?;
+///     Ok(())
+/// }
+/// ```
+/// [`JsAny`]: ./enum.JsAny.html
 pub struct JsThis<'e>(pub(crate) JsAny<'e>);
 
 impl<'e> JsThis<'e> {
-    pub fn get_any(&self) -> JsAny<'e> {
-        self.0.clone()
+    /// Returns the inner `JsAny`
+    pub fn get_any(self) -> JsAny<'e> {
+        self.0
     }
 }
 
@@ -219,6 +240,9 @@ impl<'e> JsValue for JsThis<'e> {
     }
 }
 
+/// Helper trait to get the inner [`Value`]
+///
+/// [`Value`]: ./struct.Value.html
 pub trait JsValue {
     fn get_value(&self) -> Value;
 }

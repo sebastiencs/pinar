@@ -1,8 +1,16 @@
 
 use crate::*;
 
+/// Trait to convert one or multiple value(s) to javascript.
+///
+/// Is it implemented for
+/// - `T` where `T:`[`ToJs`]
+/// - tuples where every elements implement [`ToJs`]
+///
 pub trait MultiJs {
+    #[doc(hidden)]
     type Result: IntoIterator<Item = Value>;
+    #[doc(hidden)]
     fn make_iter(self, env: Env) -> Result<Self::Result>;
 }
 

@@ -2,6 +2,11 @@ use napi_sys::*;
 
 use derive_more::Display;
 
+/// Represents different values returned from n-api functions
+///
+/// This implements [`JsError`]
+///
+/// [`JsError`]: ./trait.JsError.html
 #[derive(Display, Debug)]
 pub enum Status {
     #[display(fmt = "Ok.")]
@@ -45,9 +50,9 @@ pub enum Status {
 impl Status {
     #[inline]
     pub fn result(status: napi_status) -> Result<(), Status> {
-        match Status::from(status) {
-            Status::Ok => Ok(()),
-            s => Err(s)
+        match status {
+            napi_status::napi_ok => Ok(()),
+            e => Err(Status::from(e))
         }
     }
 }
