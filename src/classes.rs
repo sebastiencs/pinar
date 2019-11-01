@@ -7,7 +7,6 @@ use std::any::TypeId;
 
 use crate::prelude::*;
 use crate::error::JsClassError;
-use crate::Result;
 
 /// Trait to implement to create a Javascript class.
 ///
@@ -67,7 +66,7 @@ pub trait JsClass : Sized + 'static {
     /// Arguments type of the class constructor.
     type ArgsConstructor: FromArguments;
 
-    fn constructor(_args: Self::ArgsConstructor) -> Result<Self> {
+    fn constructor(_args: Self::ArgsConstructor) -> JsResult<Self> {
         Err(JsClassError::NoConstructor(Self::CLASSNAME).into())
     }
 
@@ -75,7 +74,7 @@ pub trait JsClass : Sized + 'static {
         builder
     }
 
-    fn new_instance<'e>(env: Env, args: Self::ArgsConstructor) -> Result<JsObject<'e>> {
+    fn new_instance<'e>(env: Env, args: Self::ArgsConstructor) -> JsResult<JsObject<'e>> {
         ClassBuilder::<Self>::new_instance(env, args)
     }
 }
@@ -112,7 +111,7 @@ extern "C" fn __pinar_nop(_env: napi_env, _cb_info: napi_callback_info) -> napi_
 #[inline(always)]
 pub(crate) fn execute_safely<F>(env: napi_env, closure: F) -> napi_value
 where
-    F: Fn() -> Result<Option<napi_value>>,
+    F: Fn() -> JsResult<Option<napi_value>>,
     F: std::panic::UnwindSafe
 {
     match std::panic::catch_unwind(closure) {
@@ -333,7 +332,7 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
         env: &Env,
         args_rust: Option<C::ArgsConstructor>,
         instance: Option<C>
-    ) -> Result<JsFunction<'e>>
+    ) -> JsResult<JsFunction<'e>>
     {
         let mut props: Vec<_> = self.props.iter().enumerate().map(|(index, prop)| { napi_property_descriptor {
             utf8name: prop.name.as_ptr() as *const i8,
@@ -397,19 +396,19 @@ impl<C: JsClass + 'static> ClassBuilder<C> {
         Ok(JsFunction::from(result))
     }
 
-    pub fn create<'e>(&self, env: &Env) -> Result<JsFunction<'e>> {
+    pub fn create<'e>(&self, env: &Env) -> JsResult<JsFunction<'e>> {
         self.create_internal(env, None, None)
     }
 
     /// Instantiate the JS class from Rust
-    pub fn new_instance<'e>(env: Env, args: C::ArgsConstructor) -> Result<JsObject<'e>> {
+    pub fn new_instance<'e>(env: Env, args: C::ArgsConstructor) -> JsResult<JsObject<'e>> {
         let builder = ClassBuilder::<C>::default();
         let fun = builder.create_internal(&env, Some(args), None)?;
         fun.new_instance(())
     }
 
     /// Instantiate the Js class from Rust with its Rust instance
-    pub fn from_instance<'e>(env: Env, instance: C) -> Result<JsObject<'e>> {
+    pub fn from_instance<'e>(env: Env, instance: C) -> JsResult<JsObject<'e>> {
         let builder = ClassBuilder::<C>::default();
         let fun = builder.create_internal(&env, None, Some(instance))?;
         fun.new_instance(())
@@ -501,7 +500,7 @@ where
 
 /// Trait to call a method of the class
 trait ClassMethodHandler<C: JsClass> {
-    fn call(&self, this: &mut C, args: &Arguments) -> Result<Option<napi_value>>;
+    fn call(&self, this: &mut C, args: &Arguments) -> JsResult<Option<napi_value>>;
 }
 
 impl<C, A, R> ClassMethodHandler<C> for ClassMethod<C, A, R>
@@ -510,7 +509,7 @@ where
     A: FromArguments,
     R: for <'env> JsReturn<'env>
 {
-    fn call(&self, this: &mut C, args: &Arguments) -> Result<Option<napi_value>> {
+    fn call(&self, this: &mut C, args: &Arguments) -> JsResult<Option<napi_value>> {
         let env = args.env();
         let args = A::from_args(args)?;
 
@@ -558,7 +557,7 @@ impl<C> AsJsClass<C>
 where
      C: JsClass
 {
-    pub(crate) fn to_js_class(self, env: Env) -> Result<Value> {
+    pub(crate) fn to_js_class(self, env: Env) -> JsResult<Value> {
         ClassBuilder::from_instance(env, self.0).map(|c| c.get_value())
     }
 }
@@ -567,7 +566,7 @@ where
 //     const CLASSNAME: &'static str = "RustClass";
 //     type ArgsConstructor = (String, i64);
 
-//     // fn constructor(arg: Self::ArgsConstructor) -> Result<Self> {
+//     // fn constructor(arg: Self::ArgsConstructor) -> JsResult<Self> {
 //     //     Ok(SomeClass {
 //     //         number: arg.1
 //     //     })
@@ -623,7 +622,7 @@ where
 //     }
 // }
 
-// fn test(env: Env) -> Result<()> {
+// fn test(env: Env) -> JsResult<()> {
 //     //    ClassBuilder::<SomeClass>::start_build();
 
 //     SomeClass::new_instance(env, (String::from("seb"), 2))?;

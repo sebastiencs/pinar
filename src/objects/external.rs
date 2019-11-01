@@ -6,7 +6,6 @@ use std::rc::Rc;
 use napi_sys::*;
 use crate::prelude::*;
 use crate::external::External;
-use crate::Result;
 
 /// A Javascript external value.  
 ///   
@@ -61,7 +60,7 @@ pub struct JsExternal<'e> {
 
 impl<'e> JsExternal<'e> {
     /// Retrieves the raw `External` from a `JsExternal`
-    fn get_external<T>(&self) -> Result<*mut External<T>> {
+    fn get_external<T>(&self) -> JsResult<*mut External<T>> {
         let mut external: *mut External<T> = std::ptr::null_mut();
         napi_call!(napi_get_value_external(
             self.value.env(),
@@ -99,7 +98,7 @@ impl<'e> JsExternal<'e> {
     /// # Panics
     /// This function panics if the type of the Box is different, or if
     /// the external value is not a Box (Rc, or Arc)
-    pub fn take_box<T: 'static>(&self) -> Result<Option<Box<T>>> {
+    pub fn take_box<T: 'static>(&self) -> JsResult<Option<Box<T>>> {
         let external = self.get_external::<T>()?;
         // Deref raw pointer is unsafe
         Ok(unsafe { (*external).take_box::<T>() })
@@ -126,7 +125,7 @@ impl<'e> JsExternal<'e> {
     /// # Panics
     /// This function panics if the type of the Rc is different, or if
     /// the external value is not a Rc (Box, or Arc)
-    pub fn get_rc<T: 'static>(&self) -> Result<Rc<T>> {
+    pub fn get_rc<T: 'static>(&self) -> JsResult<Rc<T>> {
         let external = self.get_external::<T>()?;
         // Deref raw pointer is unsafe
         Ok(unsafe { (*external).get_rc::<T>() })
@@ -153,7 +152,7 @@ impl<'e> JsExternal<'e> {
     /// # Panics
     /// This function panics if the type of the Arc is different, or if
     /// the external value is not a Arc (Box, or Rc)
-    pub fn get_arc<T: 'static>(&self) -> Result<Arc<T>> {
+    pub fn get_arc<T: 'static>(&self) -> JsResult<Arc<T>> {
         let external = self.get_external::<T>()?;
         // Deref raw pointer is unsafe
         Ok(unsafe { (*external).get_arc::<T>() })

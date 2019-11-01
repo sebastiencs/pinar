@@ -4,8 +4,6 @@ use napi_sys::*;
 use std::cell::Cell;
 use std::path::PathBuf;
 
-use crate::error::ArgumentsError;
-use crate::Result;
 use crate::JsValue;
 use crate::prelude::*;
 
@@ -20,7 +18,7 @@ pub struct Arguments {
 
 impl Arguments {
     /// Creates `Arguments` from js raw values
-    pub(crate) fn new(env: Env, this: Value, args: &[napi_value]) -> Result<Arguments> {
+    pub(crate) fn new(env: Env, this: Value, args: &[napi_value]) -> JsResult<Arguments> {
         Ok(Arguments {
             env,
             this,
@@ -32,7 +30,7 @@ impl Arguments {
     }
 
     /// Returns the `this` of the function
-    pub fn this<'e>(&self) -> Result<JsThis<'e>> {
+    pub fn this<'e>(&self) -> JsResult<JsThis<'e>> {
         Ok(JsThis(JsAny::from(self.this)?))
     }
 
@@ -74,7 +72,7 @@ impl Arguments {
 ///
 /// [`Pinar`]: ./derive.Pinar.html
 pub trait FromArguments: Sized {
-    fn from_args(args: &Arguments) -> Result<Self>;
+    fn from_args(args: &Arguments) -> JsResult<Self>;
 }
 
 macro_rules! from_args_tuples {
@@ -87,7 +85,7 @@ macro_rules! from_args_tuples {
                 $($tuple : FromArguments,)*
             {
                 #[allow(non_snake_case, unused_variables)]
-                fn from_args(args: &Arguments) -> Result<Self> {
+                fn from_args(args: &Arguments) -> JsResult<Self> {
                     // FromArguments::from_args needs to be called in order
                     $(let $tuple = $tuple::from_args(args)?;)*
                     Ok(($($tuple,)*))
@@ -120,7 +118,7 @@ impl<A> FromArguments for Option<A>
 where
     A: FromArguments
 {
-    fn from_args(args: &Arguments) -> Result<Self> {
+    fn from_args(args: &Arguments) -> JsResult<Self> {
         match A::from_args(args) {
             Ok(arg) => Ok(Some(arg)),
             Err(e) => {
@@ -137,7 +135,7 @@ impl<A> FromArguments for Vec<A>
 where
     A: FromArguments
 {
-    fn from_args(args: &Arguments) -> Result<Self> {
+    fn from_args(args: &Arguments) -> JsResult<Self> {
         match args.next_arg() {
             Some(JsAny::Array(array)) => {
                 let args = Arguments {
@@ -159,7 +157,7 @@ where
 #[cfg(feature = "json")]
 impl FromArguments for serde_json::Value
 {
-    fn from_args(args: &Arguments) -> Result<Self> {
+    fn from_args(args: &Arguments) -> JsResult<Self> {
         match args.next_arg() {
             Some(any) => { any.to_rust() }
             _ => Err(ArgumentsError::missing(args.arg_number()))
@@ -169,7 +167,7 @@ impl FromArguments for serde_json::Value
 
 impl FromArguments for Value
 {
-    fn from_args(args: &Arguments) -> Result<Self> {
+    fn from_args(args: &Arguments) -> JsResult<Self> {
         match args.next_arg() {
             Some(value) => Ok(value.get_value()),
             _ => Err(ArgumentsError::missing(args.arg_number()))
@@ -178,13 +176,13 @@ impl FromArguments for Value
 }
 
 impl FromArguments for Env {
-    fn from_args(args: &Arguments) -> Result<Self> {
+    fn from_args(args: &Arguments) -> JsResult<Self> {
         Ok(args.env)
     }
 }
 
 impl<'e> FromArguments for JsThis<'e> {
-    fn from_args(args: &Arguments) -> Result<Self> {
+    fn from_args(args: &Arguments) -> JsResult<Self> {
         args.this()
     }
 }
@@ -199,7 +197,7 @@ macro_rules! from_args_js {
         $(
             impl<'e> FromArguments for $jstype<'e>
             {
-                fn from_args(args: &Arguments) -> Result<Self> {
+                fn from_args(args: &Arguments) -> JsResult<Self> {
                     match args.next_arg() {
                         Some(JsAny::$utype(value)) => Ok(value),
                         Some(_) => Err(ArgumentsError::wrong_type($str, args.arg_number())),
@@ -211,7 +209,7 @@ macro_rules! from_args_js {
         $(
             impl<$($gen: 'static)*> FromArguments for $rtype<$($gen)*>
             {
-                fn from_args(args: &Arguments) -> Result<Self> {
+                fn from_args(args: &Arguments) -> JsResult<Self> {
                     match args.next_arg() {
                         Some(JsAny::$rutype(value)) => value.to_rust(),
                         Some(_) => Err(ArgumentsError::wrong_type($rstr, args.arg_number())),
@@ -251,7 +249,7 @@ from_args_js!(
 // TODO: need specialization (nightly)
 // impl<T> FromArguments for Option<Box<T>>
 // {
-//     fn from_args(args: &Arguments) -> Result<Self> {
+//     fn from_args(args: &Arguments) -> JsResult<Self> {
 //         match args.next_arg() {
 //             Some(JsAny::External(value)) => value.to_rust(),
 //             Some(_) => Err(ArgumentsError::wrong_type("external (Option<Box>)", args.arg_number())),

@@ -2,7 +2,7 @@
 use std::ops::Deref;
 use std::marker::PhantomData;
 
-use crate::Result;
+use crate::JsResult;
 use crate::status::Status;
 use crate::value::ValueType;
 use crate::to_rust::ToRust;
@@ -115,13 +115,13 @@ macro_rules! impl_jsany {
         JS_TYPES:
         $( ($fn_name:ident, $jstype:ident, $any:ident) ),*,
     ) => {
-        $(pub fn $fn_name(&self) -> Result<$jstype<'e>> {
+        $(pub fn $fn_name(&self) -> JsResult<$jstype<'e>> {
             match self {
                 JsAny::$any(s) => Ok(s.clone()),
                 _ => Err(JsAnyError::WrongAny.into())
             }
         })*
-        $(pub fn $rfn_name(&self) -> Result<$rtype> {
+        $(pub fn $rfn_name(&self) -> JsResult<$rtype> {
             match self {
                 JsAny::$rany(s) => s.to_rust(),
                 _ => Err(JsAnyError::WrongAny.into())
@@ -132,7 +132,7 @@ macro_rules! impl_jsany {
 
 impl<'e> JsAny<'e> {
     #[inline]
-    pub(crate) fn from(value: Value) -> Result<JsAny<'e>> {
+    pub(crate) fn from(value: Value) -> JsResult<JsAny<'e>> {
         let value = match value.type_of()? {
             ValueType::Object => {
                 match value.is_array()? {

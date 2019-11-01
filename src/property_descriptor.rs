@@ -1,7 +1,7 @@
 
 use crate::Env;
 use crate::ToJs;
-use crate::Result;
+use crate::JsResult;
 use crate::JsValue;
 use napi_sys::*;
 
@@ -31,7 +31,7 @@ impl PropertyDescriptor {
     /// Creates a method on the object
     ///
     /// Todo: Remove this exposure to n-api detail
-    pub fn method<S: AsRef<str>>(env: Env, name: S, cb: napi_callback) -> Result<Self> {
+    pub fn method<S: AsRef<str>>(env: Env, name: S, cb: napi_callback) -> JsResult<Self> {
         Ok(PropertyDescriptor {
             name: env.string(name.as_ref())?.get_value().value,
             method: Some(cb),
@@ -45,7 +45,7 @@ impl PropertyDescriptor {
     /// Creates a setter on the object
     ///
     /// Todo: Remove this exposure to n-api detail
-    pub fn set_get<S: AsRef<str>>(env: Env, name: S, cb: napi_callback) -> Result<Self> {
+    pub fn set_get<S: AsRef<str>>(env: Env, name: S, cb: napi_callback) -> JsResult<Self> {
         Ok(PropertyDescriptor {
             name: env.string(name.as_ref())?.get_value().value,
             method: None,
@@ -57,7 +57,7 @@ impl PropertyDescriptor {
     }
 
     /// Creates a value on the object
-    pub fn value<'e, S: AsRef<str>, V: ToJs<'e>>(env: Env, name: S, value: V) -> Result<Self> {
+    pub fn value<'e, S: AsRef<str>, V: ToJs<'e>>(env: Env, name: S, value: V) -> JsResult<Self> {
         Ok(PropertyDescriptor {
             name: env.string(name.as_ref())?.get_value().value,
             method: None,

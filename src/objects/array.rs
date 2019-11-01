@@ -2,7 +2,6 @@
 use std::marker::PhantomData;
 use napi_sys::*;
 use crate::prelude::*;
-use crate::Result;
 
 /// A Javascript array object.
 pub struct JsArray<'e> {
@@ -12,12 +11,12 @@ pub struct JsArray<'e> {
 
 impl<'e> JsArray<'e> {
     /// Returns true if the array has a length of 0.
-    pub fn is_empty(&self) -> Result<bool> {
+    pub fn is_empty(&self) -> JsResult<bool> {
         Ok(self.len()? == 0)
     }
 
     /// Returns the number of values in the array.
-    pub fn len(&self) -> Result<usize> {
+    pub fn len(&self) -> JsResult<usize> {
         let mut len: u32 = 0;
         napi_call!(napi_get_array_length(
             self.value.env(),
@@ -39,7 +38,7 @@ impl<'e> JsArray<'e> {
     ///     Ok(())
     /// }
     /// ```
-    pub fn iter(&self) -> Result<JsArrayIterator> {
+    pub fn iter(&self) -> JsResult<JsArrayIterator> {
         Ok(JsArrayIterator {
             index: 0,
             array: self,
@@ -59,7 +58,7 @@ impl<'e> JsArray<'e> {
     ///     Ok(())
     /// }
     /// ```
-    pub fn set<V>(&self, index: u32, value: V) -> Result<()>
+    pub fn set<V>(&self, index: u32, value: V) -> JsResult<()>
     where
         V: ToJs<'e>
     {
@@ -76,7 +75,7 @@ impl<'e> JsArray<'e> {
     /// Similar to [`set`] but takes a reference on the JS value
     ///
     /// [`set`]: #method.set
-    pub(crate) fn set_ref<V>(&self, index: u32, value: &V) -> Result<()>
+    pub(crate) fn set_ref<V>(&self, index: u32, value: &V) -> JsResult<()>
     where
         V: ToJs<'e>
     {
@@ -101,12 +100,12 @@ impl<'e> JsArray<'e> {
     ///     Ok(())
     /// }
     /// ```
-    pub fn get(&self, index: u32) -> Result<JsAny<'e>> {
+    pub fn get(&self, index: u32) -> JsResult<JsAny<'e>> {
         JsAny::from(self.get_value(index)?)
     }
 
     /// Returns the raw value at the requested index.
-    fn get_value(&self, index: u32) -> Result<Value> {
+    fn get_value(&self, index: u32) -> JsResult<Value> {
         let mut value = Value::new(self.value.env);
         napi_call!(napi_get_element(
             self.value.env(),
@@ -117,7 +116,7 @@ impl<'e> JsArray<'e> {
     }
 
     /// Returns a Vec of all values in the array. 
-    pub(crate) fn values(&self) -> Result<Vec<Value>> {
+    pub(crate) fn values(&self) -> JsResult<Vec<Value>> {
         let len = self.len()?;
         let mut vec = Vec::with_capacity(len);
         for i in 0..len {
@@ -129,7 +128,7 @@ impl<'e> JsArray<'e> {
     /// Similar to [`values`] but transform values with `fun`
     ///
     /// [`values`]: #method.values
-    pub(crate) fn with_values<T>(&self, fun: impl Fn(Value) -> Result<T>) -> Result<Vec<T>> {
+    pub(crate) fn with_values<T>(&self, fun: impl Fn(Value) -> JsResult<T>) -> JsResult<Vec<T>> {
         let len = self.len()?;
         let mut vec = Vec::with_capacity(len);
         for i in 0..len {

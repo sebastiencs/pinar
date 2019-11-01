@@ -3,7 +3,6 @@ use std::marker::PhantomData;
 use std::rc::Rc;
 
 use napi_sys::*;
-use crate::Result;
 use crate::prelude::*;
 
 pub(crate) struct JsRefInner {
@@ -59,7 +58,7 @@ pub trait AsJsRef<T: JsValue> {
     ///     Ok(())
     /// }
     /// ```
-    fn as_js_ref(&self) -> Result<JsRef<T>>;
+    fn as_js_ref(&self) -> JsResult<JsRef<T>>;
 }
 
 impl<T> Drop for JsRef<T>
@@ -88,7 +87,7 @@ macro_rules! impl_jsref {
 
             impl<'e> AsJsRef<$jstype<'static>> for $jstype<'e>
             {
-                fn as_js_ref(&self) -> Result<JsRef<$jstype<'static>>> {
+                fn as_js_ref(&self) -> JsResult<JsRef<$jstype<'static>>> {
                     let env = self.get_value().env;
                     let mut js_ref: napi_ref = std::ptr::null_mut();
 
@@ -111,7 +110,7 @@ macro_rules! impl_jsref {
 
             impl<'a, 'e> JsRef<$jstype<'a>> {
                 /// Returns the Javascript value associated to that reference
-                pub fn deref(&self) -> Result<$jstype<'e>> {
+                pub fn deref(&self) -> JsResult<$jstype<'e>> {
                     let mut result = Value::new(self.inner.env);
 
                     napi_call!(napi_get_reference_value(

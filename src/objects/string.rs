@@ -3,7 +3,6 @@ use std::marker::PhantomData;
 use std::os::raw::c_char;
 use napi_sys::*;
 use crate::prelude::*;
-use crate::Result;
 
 /// A Javascript string
 pub struct JsString<'e> {
@@ -13,7 +12,7 @@ pub struct JsString<'e> {
 
 impl<'e> JsString<'e> {
     /// Returns the string length
-    pub fn len(&self) -> Result<usize> {
+    pub fn len(&self) -> JsResult<usize> {
         let mut length = 0;
 
         napi_call!(napi_get_value_string_utf8(
@@ -28,7 +27,7 @@ impl<'e> JsString<'e> {
     }
 
     /// Checks if the string is empty
-    pub fn is_empty(&self) -> Result<bool> {
+    pub fn is_empty(&self) -> JsResult<bool> {
         Ok(self.len()? == 0)
     }
 }

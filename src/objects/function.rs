@@ -38,7 +38,7 @@ impl<'e> JsFunction<'e> {
     /// }
     ///  
     /// ```
-    pub fn call(&self, args: impl MultiJs) -> Result<JsAny<'e>> {
+    pub fn call(&self, args: impl MultiJs) -> JsResult<JsAny<'e>> {
         let global = self.value.env.global()?;
         self.call_with_this(global, args)
     }
@@ -58,7 +58,7 @@ impl<'e> JsFunction<'e> {
     ///  
     /// ``` 
     /// [`call`]: #method.call
-    pub fn call_with_this(&self, this: impl ToJs<'e>, args: impl MultiJs) -> Result<JsAny<'e>> {
+    pub fn call_with_this(&self, this: impl ToJs<'e>, args: impl MultiJs) -> JsResult<JsAny<'e>> {
         let args = args.make_values(self.value.env)?;
         let mut result = Value::new(self.value.env);
         let this = this.to_js(self.value.env)?;
@@ -81,7 +81,7 @@ impl<'e> JsFunction<'e> {
     /// ```
     /// const value = new MyConstructor(1, 2, 3);
     /// ```
-    pub fn new_instance(&self, args: impl MultiJs) -> Result<JsObject<'e>> {
+    pub fn new_instance(&self, args: impl MultiJs) -> JsResult<JsObject<'e>> {
         let args = args.make_values(self.value.env)?;
         let mut result = Value::new(self.value.env);
 
@@ -121,7 +121,7 @@ impl<'e> JsFunction<'e> {
     /// More information can be found on [`JsFunctionThreadSafe`].
     /// 
     /// [`JsFunctionThreadSafe`]: ../struct.JsFunctionThreadSafe.html
-    pub fn make_threadsafe<Args, Ret>(&self) -> Result<JsFunctionThreadSafe<Args, Ret>>
+    pub fn make_threadsafe<Args, Ret>(&self) -> JsResult<JsFunctionThreadSafe<Args, Ret>>
     where
         Args: MultiJs + 'static,
         Ret: DeserializeOwned,

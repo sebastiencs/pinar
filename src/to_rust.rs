@@ -5,7 +5,6 @@ use std::os::raw::c_char;
 use napi_sys::*;
 use std::path::PathBuf;
 use crate::prelude::*;
-use crate::Result;
 
 /// Trait to convert a Javascript value to Rust
 ///
@@ -27,7 +26,7 @@ pub trait ToRust<R> {
 
 impl<'e> ToRust<String> for JsString<'e>
 {
-    fn to_rust(&self) -> Result<String> {
+    fn to_rust(&self) -> JsResult<String> {
         let len = self.len()?;
         let mut buffer: Vec<u8> = Vec::with_capacity(len + 1); // + '\0'
         let mut written = 0usize;
@@ -50,16 +49,14 @@ impl<'e> ToRust<String> for JsString<'e>
 
 impl<'e> ToRust<PathBuf> for JsString<'e>
 {
-    fn to_rust(&self) -> Result<PathBuf> {
-        let result: Result<String> = self.to_rust();
+    fn to_rust(&self) -> JsResult<PathBuf> {
+        let result: JsResult<String> = self.to_rust();
         result.map(PathBuf::from)
     }
 }
 
-use crate::error::ArgumentsError;
-
 impl<'e> ToRust<i64> for JsNumber<'e> {
-    fn to_rust(&self) -> Result<i64> {
+    fn to_rust(&self) -> JsResult<i64> {
         let mut number = 0i64;
 
         napi_call!(napi_get_value_int64(
@@ -73,7 +70,7 @@ impl<'e> ToRust<i64> for JsNumber<'e> {
 }
 
 impl<'e> ToRust<i32> for JsNumber<'e> {
-    fn to_rust(&self) -> Result<i32> {
+    fn to_rust(&self) -> JsResult<i32> {
         let mut number = 0i32;
 
         napi_call!(napi_get_value_int32(
@@ -87,7 +84,7 @@ impl<'e> ToRust<i32> for JsNumber<'e> {
 }
 
 impl<'e> ToRust<u32> for JsNumber<'e> {
-    fn to_rust(&self) -> Result<u32> {
+    fn to_rust(&self) -> JsResult<u32> {
         let mut number = 0u32;
 
         napi_call!(napi_get_value_uint32(
@@ -101,7 +98,7 @@ impl<'e> ToRust<u32> for JsNumber<'e> {
 }
 
 impl<'e> ToRust<f64> for JsNumber<'e> {
-    fn to_rust(&self) -> Result<f64> {
+    fn to_rust(&self) -> JsResult<f64> {
         let mut number = 0f64;
 
         napi_call!(napi_get_value_double(
@@ -115,7 +112,7 @@ impl<'e> ToRust<f64> for JsNumber<'e> {
 }
 
 impl<'e> ToRust<bool> for JsBoolean<'e> {
-    fn to_rust(&self) -> Result<bool> {
+    fn to_rust(&self) -> JsResult<bool> {
         let mut result = false;
 
         napi_call!(napi_get_value_bool(
@@ -131,7 +128,7 @@ impl<'e> ToRust<bool> for JsBoolean<'e> {
 
 #[cfg(feature = "json")]
 impl<'e> ToRust<serde_json::Value> for JsAny<'e> {
-    fn to_rust(&self) -> Result<serde_json::Value> {
+    fn to_rust(&self) -> JsResult<serde_json::Value> {
         crate::pinar_serde::de::from_any(self.env(), self.clone())
             .map_err(|e| e.into())
     }
@@ -151,7 +148,7 @@ impl<'e> ToRust<serde_json::Value> for JsAny<'e> {
 //     JsBoolean<'e>: ToRust<T>,
 //     JsBigInt<'e>: ToRust<T>,
 // {
-//     fn to_rust(&self) -> Result<T> {
+//     fn to_rust(&self) -> JsResult<T> {
 //         match self {
 //             JsAny::String(s) => s.to_rust(),
 //             JsAny::Object(s) => s.to_rust(),
@@ -174,7 +171,7 @@ impl<'e> ToRust<serde_json::Value> for JsAny<'e> {
 // where
 //     JsString<'e>: ToRust<T>,
 // {
-//     fn to_rust(&self) -> Result<T> {
+//     fn to_rust(&self) -> JsResult<T> {
 //         match self {
 //             JsAny::String(s) => s.to_rust(),
 //             _ => Err(WrongAny)
@@ -186,7 +183,7 @@ impl<'e> ToRust<serde_json::Value> for JsAny<'e> {
 // where
 //     JsObject<'e>: ToRust<T>,
 // {
-//     fn to_rust(&self) -> Result<T> {
+//     fn to_rust(&self) -> JsResult<T> {
 //         match self {
 //             JsAny::Object(s) => s.to_rust(),
 //             _ => Err(WrongAny)
@@ -196,21 +193,21 @@ impl<'e> ToRust<serde_json::Value> for JsAny<'e> {
 
 impl<'e, T: 'static> ToRust<Arc<T>> for JsExternal<'e>
 {
-    fn to_rust(&self) -> Result<Arc<T>> {
+    fn to_rust(&self) -> JsResult<Arc<T>> {
         self.get_arc()
     }
 }
 
 impl<'e, T: 'static> ToRust<Rc<T>> for JsExternal<'e>
 {
-    fn to_rust(&self) -> Result<Rc<T>> {
+    fn to_rust(&self) -> JsResult<Rc<T>> {
         self.get_rc()
     }
 }
 
 impl<'e, T: 'static> ToRust<Box<T>> for JsExternal<'e>
 {
-    fn to_rust(&self) -> Result<Box<T>> {
+    fn to_rust(&self) -> JsResult<Box<T>> {
         match self.take_box()? {
             Some(b) => Ok(b),
             _ => panic!("Extracting a box from a JsExternal that have
@@ -220,7 +217,7 @@ already been extracted. Use Option<Box<T>>")
 }
 
 impl<'e, T: 'static> ToRust<Option<Box<T>>> for JsExternal<'e> {
-    fn to_rust(&self) -> Result<Option<Box<T>>> {
+    fn to_rust(&self) -> JsResult<Option<Box<T>>> {
         self.take_box()
     }
 }
@@ -231,11 +228,11 @@ impl<'e, T> ToRust<Vec<T>> for JsArray<'e>
 where
     T: DeserializeOwned
 {
-    fn to_rust(&self) -> Result<Vec<T>> {
+    fn to_rust(&self) -> JsResult<Vec<T>> {
         let env = self.value.env;
         let mut vec = Vec::with_capacity(self.len()?);
         for elem in self.iter()? {
-            let elem: Result<_> = pinar_serde::de::from_any::<T>(env, elem).map_err(Into::into);
+            let elem: JsResult<_> = pinar_serde::de::from_any::<T>(env, elem).map_err(Into::into);
             vec.push(elem?);
         }
         Ok(vec)

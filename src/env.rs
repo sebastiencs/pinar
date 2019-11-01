@@ -28,7 +28,7 @@ use crate::{
     JsNull,
     JsAny,
 };
-use crate::{Result, Value, JsValue};
+use crate::{JsResult, Value, JsValue};
 use crate::status::Status;
 
 /// Represent the Javascript context in which the native function has been invoked.
@@ -66,7 +66,7 @@ impl Env {
     ///     Ok(())
     /// }
     /// ```
-    pub fn console_log(&self, args: impl MultiJs) -> Result<()> {
+    pub fn console_log(&self, args: impl MultiJs) -> JsResult<()> {
         let log = self.global()?
                       .get("console")?
                       .as_jsobject()?
@@ -89,7 +89,7 @@ impl Env {
     ///     Ok(())
     /// }
     /// ```
-    pub fn console_error(&self, args: impl MultiJs) -> Result<()> {
+    pub fn console_error(&self, args: impl MultiJs) -> JsResult<()> {
         let error = self.global()?
                         .get("console")?
                         .as_jsobject()?
@@ -110,7 +110,7 @@ impl Env {
     ///     env.boolean(true)
     /// }
     /// ```
-    pub fn boolean<'e>(&self, b: bool) -> Result<JsBoolean<'e>> {
+    pub fn boolean<'e>(&self, b: bool) -> JsResult<JsBoolean<'e>> {
         let mut value = Value::new(*self);
 
         napi_call!(napi_get_boolean(
@@ -132,7 +132,7 @@ impl Env {
     ///     env.double(42.0)
     /// }
     /// ```
-    pub fn double<'e>(&self, d: f64) -> Result<JsNumber<'e>> {
+    pub fn double<'e>(&self, d: f64) -> JsResult<JsNumber<'e>> {
         let mut value = Value::new(*self);
 
         napi_call!(napi_create_double(
@@ -156,7 +156,7 @@ impl Env {
     ///     Ok(obj)
     /// }
     /// ```
-    pub fn object<'e>(&self) -> Result<JsObject<'e>> {
+    pub fn object<'e>(&self) -> JsResult<JsObject<'e>> {
         let mut value = Value::new(*self);
 
         napi_call!(napi_create_object(
@@ -177,7 +177,7 @@ impl Env {
     ///     env.number(42)
     /// }
     /// ```
-    pub fn number<'e>(&self, n: i64) -> Result<JsNumber<'e>> {
+    pub fn number<'e>(&self, n: i64) -> JsResult<JsNumber<'e>> {
         let mut value = Value::new(*self);
 
         napi_call!(napi_create_int64(
@@ -199,7 +199,7 @@ impl Env {
     ///     env.string("hello")
     /// }
     /// ```
-    pub fn string<'e, S: AsRef<str>>(&self, s: S) -> Result<JsString<'e>> {
+    pub fn string<'e, S: AsRef<str>>(&self, s: S) -> JsResult<JsString<'e>> {
         let mut value = Value::new(*self);
         let s = s.as_ref();
 
@@ -225,7 +225,7 @@ impl Env {
     ///     Ok(array)
     /// }
     /// ```
-    pub fn array<'e>(&self) -> Result<JsArray<'e>> {
+    pub fn array<'e>(&self) -> JsResult<JsArray<'e>> {
         let mut value = Value::new(*self);
 
         napi_call!(napi_create_array(
@@ -246,7 +246,7 @@ impl Env {
     ///     env.array_with_capacity(100)
     /// }
     /// ```
-    pub fn array_with_capacity<'e>(&self, cap: usize) -> Result<JsArray<'e>> {
+    pub fn array_with_capacity<'e>(&self, cap: usize) -> JsResult<JsArray<'e>> {
         let mut value = Value::new(*self);
 
         napi_call!(napi_create_array_with_length(
@@ -259,7 +259,7 @@ impl Env {
     }
 
     /// Returns the javascript `global` object.
-    pub fn global<'e>(&self) -> Result<JsObject<'e>> {
+    pub fn global<'e>(&self) -> JsResult<JsObject<'e>> {
         let mut global = Value::new(*self);
 
         napi_call!(napi_get_global(
@@ -271,7 +271,7 @@ impl Env {
     }
 
     /// Returns the javascript `undefined`.
-    pub fn undefined<'e>(&self) -> Result<JsUndefined<'e>> {
+    pub fn undefined<'e>(&self) -> JsResult<JsUndefined<'e>> {
         let mut undefined = Value::new(*self);
 
         napi_call!(napi_get_undefined(
@@ -283,7 +283,7 @@ impl Env {
     }
 
     /// Returns the javascript `null`.
-    pub fn null<'e>(&self) -> Result<JsNull<'e>> {
+    pub fn null<'e>(&self) -> JsResult<JsNull<'e>> {
         let mut null = Value::new(*self);
 
         napi_call!(napi_get_null(
@@ -304,7 +304,7 @@ impl Env {
     ///     env.external_box(Box::new(100))
     /// }
     /// ```
-    pub fn external_box<'e, T: 'static>(&self, ptr: Box<T>) -> Result<JsExternal<'e>> {
+    pub fn external_box<'e, T: 'static>(&self, ptr: Box<T>) -> JsResult<JsExternal<'e>> {
         let mut result = Value::new(*self);
         let external = Box::new(External::new_box(ptr));
 
@@ -329,7 +329,7 @@ impl Env {
     ///     env.external_rc(Rc::new(100))
     /// }
     /// ```
-    pub fn external_rc<'e, T: 'static>(&self, ptr: Rc<T>) -> Result<JsExternal<'e>> {
+    pub fn external_rc<'e, T: 'static>(&self, ptr: Rc<T>) -> JsResult<JsExternal<'e>> {
         let mut result = Value::new(*self);
         let external = Box::new(External::new_rc(ptr));
 
@@ -354,7 +354,7 @@ impl Env {
     ///     env.external_arc(Arc::new(100))
     /// }
     /// ```
-    pub fn external_arc<'e, T: 'static>(&self, ptr: Arc<T>) -> Result<JsExternal<'e>> {
+    pub fn external_arc<'e, T: 'static>(&self, ptr: Arc<T>) -> JsResult<JsExternal<'e>> {
         let mut result = Value::new(*self);
         let external = Box::new(External::new_arc(ptr));
 
@@ -383,7 +383,7 @@ impl Env {
     ///     env.function("jsfunc", my_js_func)
     /// }
     /// ```
-    pub fn function<'e, N, F, A, R>(&self, name: N, fun: F) -> Result<JsFunction<'e>>
+    pub fn function<'e, N, F, A, R>(&self, name: N, fun: F) -> JsResult<JsFunction<'e>>
     where
         N: AsRef<str>,
         A: FromArguments + 'static,
@@ -395,7 +395,7 @@ impl Env {
         self.function_internal(name, data)
     }
 
-    pub(crate) fn function_internal<'e, N>(&self, name: N, fun: Rc<ModuleFunction>) -> Result<JsFunction<'e>>
+    pub(crate) fn function_internal<'e, N>(&self, name: N, fun: Rc<ModuleFunction>) -> JsResult<JsFunction<'e>>
     where
         N: AsRef<str>
     {
@@ -423,7 +423,7 @@ impl Env {
         Ok(JsFunction::from(result))
     }
 
-    pub(crate) fn callback_info<D>(&self, info: napi_callback_info) -> Result<(*mut D, Arguments)> {
+    pub(crate) fn callback_info<D>(&self, info: napi_callback_info) -> JsResult<(*mut D, Arguments)> {
         let mut argc: usize = 12;
         let mut argv: Vec<napi_value> = Vec::with_capacity(argc);
         let mut this = Value::new(*self);
@@ -453,7 +453,7 @@ impl Env {
     ///     env.throw("some error")
     /// }
     /// ```
-    pub fn throw<'e, V>(&self, error: V) -> Result<()>
+    pub fn throw<'e, V>(&self, error: V) -> JsResult<()>
     where
         V: ToJs<'e>
     {
@@ -474,7 +474,7 @@ impl Env {
     ///     env.throw_error("some message", "my_code")
     /// }
     /// ```
-    pub fn throw_error<M>(&self, msg: M, code: impl Into<Option<String>>) -> Result<()>
+    pub fn throw_error<M>(&self, msg: M, code: impl Into<Option<String>>) -> JsResult<()>
     where
         M: AsRef<str>
     {
@@ -504,7 +504,7 @@ impl Env {
     ///     env.throw_type_error("some message", "my_code")
     /// }
     /// ```
-    pub fn throw_type_error<'s, M>(&self, msg: M, code: impl Into<Option<&'s str>>) -> Result<()>
+    pub fn throw_type_error<'s, M>(&self, msg: M, code: impl Into<Option<&'s str>>) -> JsResult<()>
     where
         M: AsRef<str>
     {
@@ -534,7 +534,7 @@ impl Env {
     ///     env.throw_range_error("some message", "my_code")
     /// }
     /// ```
-    pub fn throw_range_error<'s, M>(&self, msg: M, code: impl Into<Option<&'s str>>) -> Result<()>
+    pub fn throw_range_error<'s, M>(&self, msg: M, code: impl Into<Option<&'s str>>) -> JsResult<()>
     where
         M: AsRef<str>
     {
@@ -567,7 +567,7 @@ impl Env {
     /// ```
     ///
     ///
-    pub fn run_script<'e, S>(&self, script: S) -> Result<JsAny<'e>>
+    pub fn run_script<'e, S>(&self, script: S) -> JsResult<JsAny<'e>>
     where
         S: AsRef<str>
     {

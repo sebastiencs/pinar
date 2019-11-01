@@ -10,7 +10,6 @@ use std::collections::hash_map::Entry;
 use std::rc::Rc;
 
 use crate::prelude::*;
-use crate::Result;
 
 /// Helper struct to export functions, classes and their methods to JS
 ///
@@ -86,7 +85,7 @@ impl<'e> ModuleBuilder<'e> {
     }
 
     /// Build the `js module`
-    pub fn build(self) -> Result<napi_value> {
+    pub fn build(self) -> JsResult<napi_value> {
         for (name, functions) in self.functions.into_iter() {
             let fun = Rc::new(functions);
             let jsfunction = self.env.function_internal(&name, fun)?;
@@ -176,7 +175,7 @@ where
 /// - Call the function and return its result
 ///
 pub(crate) trait CallbackHandler {
-    fn handle(&self, args: &Arguments) -> Result<Option<napi_value>>;
+    fn handle(&self, args: &Arguments) -> JsResult<Option<napi_value>>;
 }
 
 impl<A, R> CallbackHandler for Callback<A, R>
@@ -185,7 +184,7 @@ where
     R: for<'env> JsReturn<'env>
 {
     /// See [`CallbackHandler`]
-    fn handle(&self, args: &Arguments) -> Result<Option<napi_value>> {
+    fn handle(&self, args: &Arguments) -> JsResult<Option<napi_value>> {
         let env = args.env();
         let args = A::from_args(args)?;
 

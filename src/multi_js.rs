@@ -9,14 +9,14 @@ use crate::*;
 ///
 pub trait MultiJs {
     #[doc(hidden)]
-    fn make_values<'v>(self, env: Env) -> Result<MultiValue>;
+    fn make_values(self, env: Env) -> JsResult<MultiValue>;
 }
 
 impl<'e, A> MultiJs for A
 where
     A: ToJs<'e>,
 {
-    fn make_values<'v>(self, env: Env) -> Result<MultiValue> {
+    fn make_values(self, env: Env) -> JsResult<MultiValue> {
         let mut values: [napi_value; 12] = [std::ptr::null_mut(); 12];
 
         values[0] = self.to_js(env)?.get_value().value;
@@ -67,8 +67,8 @@ macro_rules! multi_js_tuples {
             where
                 $($tuple : ToJs<'e>,)*
             {
-                #[allow(unused_variables)]
-                fn make_values<'v>(self, env: Env) -> Result<MultiValue> {
+                #[allow(unused_variables, unused_mut)]
+                fn make_values(self, env: Env) -> JsResult<MultiValue> {
                     let mut values: [napi_value; 12] = [std::ptr::null_mut(); 12];
 
                     $(values[$n] = self.$n.to_js(env)?.get_value().value;)*

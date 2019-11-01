@@ -7,7 +7,6 @@ use std::sync::atomic::{AtomicPtr, Ordering};
 use std::sync::Arc;
 use std::sync::mpsc::{sync_channel, SyncSender};
 use napi_sys::*;
-use crate::Result;
 use crate::prelude::*;
 use serde::de::DeserializeOwned;
 
@@ -85,7 +84,7 @@ where
     R: DeserializeOwned,
 {
     /// Creates a `JsFunctionThreadSafe` from a raw `napi_threadsafe_function`
-    pub(crate) fn new(fun: napi_threadsafe_function) -> Result<JsFunctionThreadSafe<T, R>> {
+    pub(crate) fn new(fun: napi_threadsafe_function) -> JsResult<JsFunctionThreadSafe<T, R>> {
         let fun = JsFunctionThreadSafe {
             fun: Arc::new(AtomicPtr::new(fun)),
             phantom: PhantomData
@@ -97,7 +96,7 @@ where
     }
 
     /// Call the js function and wait for its result.
-    pub fn call(&self, args: impl Into<Box<T>>) -> Result<R> {
+    pub fn call(&self, args: impl Into<Box<T>>) -> JsResult<R> {
         let (sender, receiver) = sync_channel(0);
         let data = Box::new(DataThreadSafe {
             send_result: Some(sender),
@@ -112,7 +111,7 @@ where
     }
 
     /// Call the js function, this function _does not_ wait for the result.
-    pub fn call_ignore_result(&self, args: impl Into<Box<T>>) -> Result<()> {
+    pub fn call_ignore_result(&self, args: impl Into<Box<T>>) -> JsResult<()> {
         let data = Box::new(DataThreadSafe::<_, ()> {
             send_result: None,
             args: args.into()
@@ -126,7 +125,7 @@ where
     }
 
     /// See https://nodejs.org/api/n-api.html#n_api_napi_acquire_threadsafe_function
-    fn acquire(&self) -> Result<()> {
+    fn acquire(&self) -> JsResult<()> {
         napi_call!(napi_acquire_threadsafe_function(
             self.fun.load(Ordering::Relaxed)
         ))?;
@@ -162,7 +161,7 @@ where
 {
     type Error = crate::error::Error;
 
-    fn try_from(fun: &JsFunction) -> Result<JsFunctionThreadSafe<T, R>> {
+    fn try_from(fun: &JsFunction) -> JsResult<JsFunctionThreadSafe<T, R>> {
         let mut result: napi_threadsafe_function = std::ptr::null_mut();
 
         let resource_name = "rust_threadsafe_function".to_js(fun.value.env)?;
