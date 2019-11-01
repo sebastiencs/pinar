@@ -59,10 +59,7 @@ impl<'e> JsFunction<'e> {
     /// ``` 
     /// [`call`]: #method.call
     pub fn call_with_this(&self, this: impl ToJs<'e>, args: impl MultiJs) -> Result<JsAny<'e>> {
-        let args: Vec<_> = args.make_iter(self.value.env)?
-                               .into_iter()
-                               .map(|v| v.value)
-                               .collect();
+        let args = args.make_values(self.value.env)?;
         let mut result = Value::new(self.value.env);
         let this = this.to_js(self.value.env)?;
 
@@ -85,10 +82,7 @@ impl<'e> JsFunction<'e> {
     /// const value = new MyConstructor(1, 2, 3);
     /// ```
     pub fn new_instance(&self, args: impl MultiJs) -> Result<JsObject<'e>> {
-        let args: Vec<_> = args.make_iter(self.value.env)?
-                               .into_iter()
-                               .map(|v| v.value)
-                               .collect();
+        let args = args.make_values(self.value.env)?;
         let mut result = Value::new(self.value.env);
 
         napi_call!(napi_new_instance(
