@@ -124,15 +124,13 @@ pub(crate) extern "C" fn __pinar_dispatch_function(env: napi_env, info: napi_cal
         let mut last_error = None;
 
         for function in &function.functions {
-            let result = function.as_ref().handle(&args);
-            if result.is_err() {
-                // if let Some(e) = e.downcast_ref::<ArgumentsError>() {
-                //     last_error = Some(e.clone());
-                //     continue;
-                // };
-                last_error = Some(result.unwrap_err());
+            let result = function.as_ref().call(&args);
+
+            if let Err(e) = result {
+                last_error = Some(e);
                 continue;
             }
+
             return result;
         }
 
@@ -175,7 +173,7 @@ where
 /// - Call the function and return its result
 ///
 pub(crate) trait CallbackHandler {
-    fn handle(&self, args: &Arguments) -> JsResult<Option<napi_value>>;
+    fn call(&self, args: &Arguments) -> JsResult<Option<Value>>;
 }
 
 impl<A, R> CallbackHandler for Callback<A, R>
@@ -184,13 +182,11 @@ where
     R: for<'env> JsReturn<'env>
 {
     /// See [`CallbackHandler`]
-    fn handle(&self, args: &Arguments) -> JsResult<Option<napi_value>> {
+    fn call(&self, args: &Arguments) -> JsResult<Option<Value>> {
         let env = args.env();
         let args = A::from_args(args)?;
 
-        Ok((self.fun)(args)
-           .get_result(env)?
-           .map(|res| res.value))
+        (self.fun)(args).get_result(env)
     }
 }
 

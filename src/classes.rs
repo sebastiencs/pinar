@@ -111,11 +111,11 @@ extern "C" fn __pinar_nop(_env: napi_env, _cb_info: napi_callback_info) -> napi_
 #[inline(always)]
 pub(crate) fn execute_safely<F>(env: napi_env, closure: F) -> napi_value
 where
-    F: Fn() -> JsResult<Option<napi_value>>,
+    F: Fn() -> JsResult<Option<Value>>,
     F: std::panic::UnwindSafe
 {
     match std::panic::catch_unwind(closure) {
-        Ok(Ok(Some(v))) => v,
+        Ok(Ok(Some(v))) => v.value,
         Ok(Ok(None)) => std::ptr::null_mut(),
         Ok(Err(error)) => {
             let env = Env::from(env);
@@ -195,7 +195,7 @@ impl<C: 'static +  JsClass> JsClassInternal for C {
                 std::ptr::null_mut()
             ))?;
 
-            Ok(Some(this.get_value().value))
+            Ok(Some(this.get_value()))
         })
     }
 
@@ -500,7 +500,7 @@ where
 
 /// Trait to call a method of the class
 trait ClassMethodHandler<C: JsClass> {
-    fn call(&self, this: &mut C, args: &Arguments) -> JsResult<Option<napi_value>>;
+    fn call(&self, this: &mut C, args: &Arguments) -> JsResult<Option<Value>>;
 }
 
 impl<C, A, R> ClassMethodHandler<C> for ClassMethod<C, A, R>
@@ -509,13 +509,11 @@ where
     A: FromArguments,
     R: for <'env> JsReturn<'env>
 {
-    fn call(&self, this: &mut C, args: &Arguments) -> JsResult<Option<napi_value>> {
+    fn call(&self, this: &mut C, args: &Arguments) -> JsResult<Option<Value>> {
         let env = args.env();
         let args = A::from_args(args)?;
 
-        Ok((self.fun)(this, args)
-           .get_result(env)?
-           .map(|res| res.value))
+        (self.fun)(this, args).get_result(env)
     }
 }
 
