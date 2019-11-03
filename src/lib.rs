@@ -6,6 +6,10 @@
 //     feature = "nightly",
 //     feature(core_intrinsics, unsized_locals)
 // )]
+#![cfg_attr(
+    feature = "nightly",
+    feature(specialization)
+)]
 //#![feature(core_intrinsics)]
 // #![feature(unsized_locals)]
 // #![feature(default_type_parameter_fallback)]

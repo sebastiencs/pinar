@@ -1,9 +1,9 @@
-use crate::JsUndefined;
 use crate::JsValue;
 use crate::Env;
 use crate::error::Error;
 use crate::ToJs;
 use crate::Value;
+use crate::JsResult;
 
 /// Trait that exported functions/methods to javascript returns.
 ///
@@ -15,7 +15,7 @@ use crate::Value;
 /// .  
 /// - `Option<T>` where `T:`[`JsReturn`],  
 ///    - None returns a javascript `undefined`.
-/// - `Result<T, E>` where `T:`[`JsReturn`] and `E:`[`JsError`],
+/// - `JsResult<T>` where `T:`[`JsReturn`],
 ///    - the error is thrown in javascript.
 ///
 /// # Example
@@ -57,18 +57,14 @@ use crate::Value;
 ///
 /// [`JsError`]: ./trait.JsError.html
 pub trait JsReturn<'e> {
-    type Value: JsValue;
-    type Error: Into<Error>;
-    fn get_result(self, env: Env) -> Result<Option<Value>, Self::Error>;
+    fn get_result(self, env: Env) -> Result<Option<Value>, Error>;
 }
 
 impl<'e, T> JsReturn<'e> for T
 where
     T: ToJs<'e>
 {
-    type Value = T::Value;
-    type Error = Error;
-    fn get_result(self, env: Env) -> Result<Option<Value>, Self::Error> {
+    fn get_result(self, env: Env) -> Result<Option<Value>, Error> {
         Ok(Some(self.to_js(env)?.get_value()))
     }
 }
@@ -77,31 +73,44 @@ impl<'e, T> JsReturn<'e> for Option<T>
 where
     T: JsReturn<'e>
 {
-    type Value = T::Value;
-    type Error = Error;
-    fn get_result(self, env: Env) -> Result<Option<Value>, Self::Error> {
+    fn get_result(self, env: Env) -> Result<Option<Value>, Error> {
         match self {
-            Some(v) => v.get_result(env).map_err(Into::into),
+            Some(v) => v.get_result(env),
             None => Ok(None)
         }
     }
 }
 
-impl<'e, T> JsReturn<'e> for crate::Result<T>
+impl<'e, T> JsReturn<'e> for JsResult<T>
 where
     T: JsReturn<'e>
 {
-    type Value = T::Value;
-    type Error = Error;
-    fn get_result(self, env: Env) -> Result<Option<Value>, Self::Error> {
-        self?.get_result(env).map_err(Into::into)
+    #[cfg(feature = "nightly")] // Make the fn default
+    default fn get_result(self, env: Env) -> Result<Option<Value>, Error> {
+        self?.get_result(env)
+    }
+
+    #[cfg(not(feature = "nightly"))]
+    fn get_result(self, env: Env) -> Result<Option<Value>, Error> {
+        self?.get_result(env)
+    }
+}
+
+#[cfg(feature = "nightly")] // Specialize the impl
+impl<'e, T> JsReturn<'e> for JsResult<Option<T>>
+where
+    T: ToJs<'e>
+{
+    fn get_result(self, env: Env) -> Result<Option<Value>, Error> {
+        match self? {
+            Some(v) => Ok(Some(v.to_js(env)?.get_value())),
+            _ => Ok(None)
+        }
     }
 }
 
 impl<'e> JsReturn<'e> for () {
-    type Value = JsUndefined<'e>;
-    type Error = Error;
-    fn get_result(self, _: Env) -> Result<Option<Value>, Self::Error> {
+    fn get_result(self, _: Env) -> Result<Option<Value>, Error> {
         Ok(None)
     }
 }
@@ -113,9 +122,7 @@ impl<'e, C> JsReturn<'e> for AsJsClass<C>
 where
     C: JsClass
 {
-    type Value = Value;
-    type Error = Error;
-    fn get_result(self, env: Env) -> Result<Option<Value>, Self::Error> {
+    fn get_result(self, env: Env) -> Result<Option<Value>, Error> {
         self.to_js_class(env).map(Some)
     }
 }
@@ -162,18 +169,14 @@ where
 ///
 #[doc(hidden)]
 pub trait JsReturnRef<'e> {
-    type Value: JsValue;
-    type Error: Into<Error>;
-    fn get_result_from_ref(&self, env: Env) -> Result<Option<Value>, Self::Error>;
+    fn get_result_from_ref(&self, env: Env) -> Result<Option<Value>, Error>;
 }
 
 impl<'e, T> JsReturnRef<'e> for T
 where
     T: ToJs<'e>
 {
-    type Value = T::Value;
-    type Error = Error;
-    fn get_result_from_ref(&self, env: Env) -> Result<Option<Value>, Self::Error> {
+    fn get_result_from_ref(&self, env: Env) -> Result<Option<Value>, Error> {
         Ok(Some(self.to_js(env)?.get_value()))
     }
 }
@@ -182,35 +185,52 @@ impl<'e, T> JsReturnRef<'e> for Option<&T>
 where
     T: JsReturnRef<'e>
 {
-    type Value = T::Value;
-    type Error = Error;
-    fn get_result_from_ref(&self, env: Env) -> Result<Option<Value>, Self::Error> {
+    fn get_result_from_ref(&self, env: Env) -> Result<Option<Value>, Error> {
         match self {
-            Some(v) => v.get_result_from_ref(env).map_err(Into::into),
+            Some(v) => v.get_result_from_ref(env),
             None => Ok(None)
         }
     }
 }
 
-impl<'e, T> JsReturnRef<'e> for crate::Result<&T>
+impl<'e, T> JsReturnRef<'e> for JsResult<&T>
 where
     T: JsReturnRef<'e>
 {
-    type Value = T::Value;
-    type Error = Error;
-    fn get_result_from_ref(&self, env: Env) -> Result<Option<Value>, Self::Error> {
+    #[cfg(feature = "nightly")] // Make the fn default
+    default fn get_result_from_ref(&self, env: Env) -> Result<Option<Value>, Error> {
         match self {
-            Ok(v) => v.get_result_from_ref(env).map_err(Into::into),
+            Ok(v) => v.get_result_from_ref(env),
             Err(e) => Err(e.into())
+        }
+    }
+
+    #[cfg(not(feature = "nightly"))]
+    fn get_result_from_ref(&self, env: Env) -> Result<Option<Value>, Error> {
+        match self {
+            Ok(v) => v.get_result_from_ref(env),
+            Err(e) => Err(e.into())
+        }
+    }
+}
+
+#[cfg(feature = "nightly")] // Specialize the impl
+impl<'e, T> JsReturnRef<'e> for JsResult<Option<&T>>
+where
+    T: ToJs<'e>
+{
+    fn get_result_from_ref(&self, env: Env) -> Result<Option<Value>, Error> {
+        match self {
+            Ok(Some(v)) => Ok(Some(v.to_js(env)?.get_value())),
+            Ok(None) => Ok(None),
+            Err(e) => Err(e.into()),
         }
     }
 }
 
 impl<'e> JsReturnRef<'e> for ()
 {
-    type Value = Value;
-    type Error = Error;
-    fn get_result_from_ref(&self, _env: Env) -> Result<Option<Value>, Self::Error> {
+    fn get_result_from_ref(&self, _env: Env) -> Result<Option<Value>, Error> {
         Ok(None)
     }
 }

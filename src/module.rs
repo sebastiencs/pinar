@@ -189,9 +189,8 @@ where
         let args = A::from_args(args)?;
 
         Ok((self.fun)(args)
-           .get_result(env)
-           .map_err(Into::into)?
-           .map(|res| res.get_value().value))
+           .get_result(env)?
+           .map(|res| res.value))
     }
 }
 
